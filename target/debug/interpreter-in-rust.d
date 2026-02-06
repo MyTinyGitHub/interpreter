@@ -1,1 +1,0 @@
-/home/dominik/homelab/apps/interpreter-in-rust/target/debug/interpreter-in-rust: /home/dominik/homelab/apps/interpreter-in-rust/src/main.rs /home/dominik/homelab/apps/interpreter-in-rust/src/repl.rs /home/dominik/homelab/apps/interpreter-in-rust/src/token.rs /home/dominik/homelab/apps/interpreter-in-rust/src/token_processor.rs
