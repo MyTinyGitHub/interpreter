@@ -1,8 +1,11 @@
-use crate::token::Token;
+use crate::repl::repl_loop;
 
+pub mod ast;
+pub mod lexer;
+pub mod parser;
+pub mod repl;
 pub mod token;
-pub mod token_processor;
 
 fn main() {
-    println!("{:?}", Token::Illegal);
+    repl_loop();
 }

@@ -2,15 +2,15 @@ use std::collections::HashMap;
 
 use crate::token::Token;
 
-struct TokenProcessor {
+pub struct Lexer {
     input: Vec<u8>,
     position: usize,
     read_position: usize,
     ch: Option<u8>,
 }
 
-impl TokenProcessor {
-    fn new(input: String) -> Self {
+impl Lexer {
+    pub fn new(input: String) -> Self {
         let mut result = Self {
             input: input.as_bytes().to_owned(),
             position: 0,
@@ -22,11 +22,7 @@ impl TokenProcessor {
         result
     }
 
-    fn next_token(&mut self) -> Token {
-        if self.ch.is_none() {
-            return Token::Eof;
-        }
-
+    pub fn next_token(&mut self) -> Token {
         let token_map = HashMap::from([
             ("let".to_owned(), Token::Let("let".to_owned())),
             ("fn".to_owned(), Token::Function("fn".to_owned())),
@@ -38,6 +34,10 @@ impl TokenProcessor {
         ]);
 
         self.skip_white_space();
+
+        if self.ch.is_none() {
+            return Token::Eof;
+        }
 
         let result = match self.ch.unwrap() as char {
             '=' => {
@@ -95,6 +95,9 @@ impl TokenProcessor {
 
     fn skip_white_space(&mut self) {
         loop {
+            if self.ch.is_none() {
+                break;
+            }
             if self.ch.unwrap().is_ascii_whitespace() {
                 self.read_char();
                 continue;
@@ -256,7 +259,7 @@ fn test_next_token() {
         Token::Semicolon(";".to_owned()),
     ];
 
-    let mut token_processor = TokenProcessor::new(input);
+    let mut token_processor = Lexer::new(input);
 
     for token in expectation {
         assert_eq!(&token, &mut token_processor.next_token());
@@ -275,7 +278,7 @@ fn test_token() {
         Token::Rbrace("}".to_owned()),
     ];
 
-    let mut token_processor = TokenProcessor::new(input);
+    let mut token_processor = Lexer::new(input);
 
     for token in expectation {
         assert_eq!(&token, &mut token_processor.next_token());
