@@ -1,67 +1,48 @@
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Token {
+    Start,
+
     Illegal,
     Eof,
-    Ident(String),
-    If(String),
-    Else(String),
-    Return(String),
-    True(String),
-    False(String),
-    Int(String),
+    Ident,
+    If,
+    Else,
+    Return,
+    True,
+    False,
+    Int,
 
-    Assign(String),
-    Equal(String),
-    Notequal(String),
+    Assign,
+    Equal,
+    Notequal,
 
-    Plus(String),
-    Minus(String),
-    Bang(String),
-    Asterisk(String),
-    Slash(String),
+    Plus,
+    Minus,
+    Bang,
+    Asterisk,
+    Slash,
 
-    Gt(String),
-    Lt(String),
+    Gt,
+    Lt,
 
-    Comma(String),
-    Semicolon(String),
-    Lparen(String),
-    Rparen(String),
-    Lbrace(String),
-    Rbrace(String),
-    Function(String),
-    Let(String),
+    Comma,
+    Semicolon,
+    Lparen,
+    Rparen,
+    Lbrace,
+    Rbrace,
+    Function,
+    Let,
 }
 
-impl Token {
-    pub fn value(&self) -> Option<&str> {
-        match self {
-            Token::Illegal | Token::Eof => None,
-            Token::Ident(s)
-            | Token::If(s)
-            | Token::Else(s)
-            | Token::Return(s)
-            | Token::True(s)
-            | Token::False(s)
-            | Token::Int(s)
-            | Token::Assign(s)
-            | Token::Equal(s)
-            | Token::Notequal(s)
-            | Token::Plus(s)
-            | Token::Minus(s)
-            | Token::Bang(s)
-            | Token::Asterisk(s)
-            | Token::Slash(s)
-            | Token::Gt(s)
-            | Token::Lt(s)
-            | Token::Comma(s)
-            | Token::Semicolon(s)
-            | Token::Lparen(s)
-            | Token::Rparen(s)
-            | Token::Lbrace(s)
-            | Token::Rbrace(s)
-            | Token::Function(s)
-            | Token::Let(s) => Some(s.as_str()),
-        }
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct TokenLiteral {
+    pub token: Token,
+    pub value: Option<String>,
+}
+
+impl TokenLiteral {
+    pub fn new(token: Token, value: Option<String>) -> Self {
+        Self { token, value }
     }
 }

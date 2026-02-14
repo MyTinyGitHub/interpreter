@@ -19,7 +19,7 @@ pub fn repl_loop() {
 
         loop {
             let token = token_processor.next_token();
-            if token == Token::Eof {
+            if token.token == Token::Eof {
                 break;
             }
 

@@ -1,21 +1,23 @@
 use crate::{
     ast::{LetStatement, Program, Statement},
     lexer::Lexer,
-    token::Token,
+    token::{Token, TokenLiteral},
 };
 
 struct Parser {
     lexer: Lexer,
-    current_token: Option<Token>,
-    peek_token: Option<Token>,
+    current_token: TokenLiteral,
+    peek_token: TokenLiteral,
+    errors: Vec<String>,
 }
 
 impl Parser {
     fn new(lexer: Lexer) -> Self {
         let mut result = Self {
             lexer,
-            current_token: None,
-            peek_token: None,
+            current_token: TokenLiteral::new(Token::Start, None),
+            peek_token: TokenLiteral::new(Token::Start, None),
+            errors: Vec::new(),
         };
 
         result.next_token();
@@ -23,22 +25,40 @@ impl Parser {
         result
     }
 
+    pub fn errors(&self) -> &[String] {
+        &self.errors
+    }
+
+    pub fn peek_error(&mut self, token: &Token) {
+        let msg = format!(
+            "expected next toekn to be {:?}, got {:?} instead",
+            token, self.peek_token
+        );
+
+        self.errors.push(msg);
+    }
+
     fn next_token(&mut self) {
-        self.current_token = self.peek_token.take();
-        self.peek_token = Some(self.lexer.next_token());
+        self.current_token = std::mem::replace(&mut self.peek_token, self.lexer.next_token());
     }
 
     fn parse_statement(&mut self) -> Option<Box<dyn Statement>> {
-        match self.current_token.clone()? {
-            Token::Let(_) => self.parse_let_statement(),
+        match self.current_token.token {
+            Token::Let => self.parse_let_statement(),
             _ => None,
         }
     }
 
-    fn parse_let_statement(&mut self) -> Option<Box<dyn Statement>> {
-        if !matches!(self.peek_token, Some(Token::Ident(_))) {
-            return None;
+    fn expect_peek(&mut self, token: Token) -> bool {
+        if !matches!(self.peek_token.clone(), token) {
+            self.peek_error(&token);
+            return false;
         }
+        true
+    }
+
+    fn parse_let_statement(&mut self) -> Option<Box<dyn Statement>> {
+        self.expect_peek(Token::Ident);
 
         let token = self.current_token.clone();
         println!("{:?}", self.current_token);
@@ -47,12 +67,9 @@ impl Parser {
 
         println!("{:?}", self.current_token);
 
-        let statement = LetStatement::new(
-            token.as_ref().unwrap(),
-            self.current_token.as_ref().unwrap(),
-        );
+        let statement = LetStatement::new(&token, &self.current_token);
 
-        while !matches!(self.current_token, Some(Token::Semicolon(_))) {
+        while !matches!(self.current_token.token, Token::Semicolon) {
             self.next_token();
         }
 
@@ -62,7 +79,7 @@ impl Parser {
     fn parse_program(&mut self) -> Program {
         let mut program = Program::new();
 
-        while self.current_token != Some(Token::Eof) {
+        while self.current_token.token != Token::Eof {
             let statement = self.parse_statement();
             if let Some(value) = statement {
                 program.statements.push(value);
@@ -85,27 +102,37 @@ mod test {
     #[test]
     fn test_parser() {
         let input = r#"
-            let x = 5;
-            let y = 10;
-            let foobar = 838383;
+            let x x 5;
+            let y 10;
+            let 838383;
         "#;
 
         let lexer = Lexer::new(input.to_owned());
         let mut parser = Parser::new(lexer);
 
         let program = parser.parse_program();
+        check_errors(&parser);
+
         let expected = ["x", "y", "foobar"];
 
         assert_eq!(program.statements.len(), expected.len());
 
         for (statement, name) in program.statements.iter().zip(expected.iter()) {
-            test_statement(statement, name);
+            test_statement(statement.as_ref(), name);
         }
     }
 
-    fn test_statement(statement: &Box<dyn Statement>, name: &str) {
+    fn test_statement(statement: &dyn Statement, name: &str) {
         assert_eq!(statement.token_literal().as_str(), "let");
         assert_eq!(statement.name().value, name);
         assert_eq!(statement.name().token_literal(), name);
+    }
+
+    fn check_errors(parser: &Parser) {
+        for error in parser.errors() {
+            println!("parser error: {}", error);
+        }
+
+        assert!(parser.errors.is_empty());
     }
 }

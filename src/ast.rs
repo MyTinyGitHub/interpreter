@@ -1,4 +1,4 @@
-use crate::token::Token;
+use crate::token::TokenLiteral;
 
 pub trait Node {
     fn token_literal(&self) -> String;
@@ -19,12 +19,12 @@ pub struct Program {
 }
 
 pub struct Identifier {
-    pub token: Token,
+    pub token: TokenLiteral,
     pub value: String,
 }
 
 pub struct LetStatement {
-    token: Token,
+    token: TokenLiteral,
     pub name: Identifier,
     //pub value: dyn Expression,
 }
@@ -38,12 +38,12 @@ impl Program {
 }
 
 impl LetStatement {
-    pub fn new(token: &Token, identifier: &Token) -> Self {
+    pub fn new(token: &TokenLiteral, identifier: &TokenLiteral) -> Self {
         Self {
             token: token.clone(),
             name: Identifier {
                 token: identifier.clone(),
-                value: identifier.value().unwrap().to_owned(),
+                value: identifier.value.to_owned().unwrap(),
             },
         }
     }
@@ -71,13 +71,13 @@ impl Statement for LetStatement {
 
 impl Node for LetStatement {
     fn token_literal(&self) -> String {
-        self.token.value().unwrap().to_string()
+        self.token.value.clone().unwrap().to_string()
     }
 }
 
 impl Node for Identifier {
     fn token_literal(&self) -> String {
-        self.token.value().unwrap().to_string()
+        self.token.value.clone().unwrap().to_string()
     }
 }
 
