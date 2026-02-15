@@ -50,7 +50,7 @@ impl Parser {
     }
 
     fn expect_peek(&mut self, token: Token) -> bool {
-        if !matches!(self.peek_token.clone(), token) {
+        if self.peek_token.clone().token != token {
             self.peek_error(&token);
             return false;
         }
@@ -102,9 +102,9 @@ mod test {
     #[test]
     fn test_parser() {
         let input = r#"
-            let x x 5;
-            let y 10;
-            let 838383;
+            let x = 5;
+            let y = 10;
+            let foobar = 838383;
         "#;
 
         let lexer = Lexer::new(input.to_owned());
