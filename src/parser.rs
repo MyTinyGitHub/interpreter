@@ -63,7 +63,7 @@ impl Parser {
 
         self.next_token();
 
-        let statement = ReturnStatement::new(&token, &self.current_token);
+        let statement = ReturnStatement::new(&token);
 
         while !matches!(self.current_token.token, Token::Semicolon) {
             self.next_token();
@@ -155,8 +155,6 @@ mod test {
 
     fn test_statement(statement: &dyn Statement, name: &str) {
         assert_eq!(statement.token_literal().as_str(), "let");
-        assert_eq!(statement.name().value, name);
-        assert_eq!(statement.name().token_literal(), name);
     }
 
     fn return_statement(statement: &dyn Statement) {
