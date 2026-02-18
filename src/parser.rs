@@ -1,5 +1,5 @@
 use crate::{
-    ast::{LetStatement, Program, Statement},
+    ast::{LetStatement, Program, ReturnStatement, Statement},
     lexer::Lexer,
     token::{Token, TokenLiteral},
 };
@@ -45,6 +45,7 @@ impl Parser {
     fn parse_statement(&mut self) -> Option<Box<dyn Statement>> {
         match self.current_token.token {
             Token::Let => self.parse_let_statement(),
+            Token::Return => self.parse_return_statement(),
             _ => None,
         }
     }
@@ -57,15 +58,26 @@ impl Parser {
         true
     }
 
+    fn parse_return_statement(&mut self) -> Option<Box<dyn Statement>> {
+        let token = self.current_token.clone();
+
+        self.next_token();
+
+        let statement = ReturnStatement::new(&token, &self.current_token);
+
+        while !matches!(self.current_token.token, Token::Semicolon) {
+            self.next_token();
+        }
+
+        Some(Box::new(statement))
+    }
+
     fn parse_let_statement(&mut self) -> Option<Box<dyn Statement>> {
         self.expect_peek(Token::Ident);
 
         let token = self.current_token.clone();
-        println!("{:?}", self.current_token);
 
         self.next_token();
-
-        println!("{:?}", self.current_token);
 
         let statement = LetStatement::new(&token, &self.current_token);
 
@@ -122,10 +134,33 @@ mod test {
         }
     }
 
+    #[test]
+    fn test_return_statement() {
+        let input = r#"
+            return 5;
+            return 10;
+            return 993322;
+        "#;
+
+        let lexer = Lexer::new(input.to_owned());
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        check_errors(&parser);
+
+        for statement in program.statements.iter() {
+            return_statement(statement.as_ref());
+        }
+    }
+
     fn test_statement(statement: &dyn Statement, name: &str) {
         assert_eq!(statement.token_literal().as_str(), "let");
         assert_eq!(statement.name().value, name);
         assert_eq!(statement.name().token_literal(), name);
+    }
+
+    fn return_statement(statement: &dyn Statement) {
+        assert_eq!(statement.token_literal().as_str(), "return");
     }
 
     fn check_errors(parser: &Parser) {
