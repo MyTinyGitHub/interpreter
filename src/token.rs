@@ -1,6 +1,13 @@
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum Token {
     Start,
+    Lowest,
+    Equals,
+    Lessgreater,
+    Sum,
+    Product,
+    Prefix,
+    Call,
 
     Illegal,
     Eof,

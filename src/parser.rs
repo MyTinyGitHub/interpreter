@@ -1,14 +1,24 @@
+use std::{collections::HashMap, hash::Hash};
+
 use crate::{
-    ast::{LetStatement, Program, ReturnStatement, Statement},
+    ast::{
+        Expression, ExpressionStatement, Identifier, LetStatement, Program, ReturnStatement,
+        Statement,
+    },
     lexer::Lexer,
     token::{Token, TokenLiteral},
 };
+
+type PrefixParserFn = fn(&mut Parser) -> Option<Box<dyn Expression>>;
+type InfixParserFn = fn(&mut Parser, dyn Expression) -> Option<Box<dyn Expression>>;
 
 struct Parser {
     lexer: Lexer,
     current_token: TokenLiteral,
     peek_token: TokenLiteral,
     errors: Vec<String>,
+    prefix_fns: HashMap<Token, PrefixParserFn>,
+    infix_fns: HashMap<Token, InfixParserFn>,
 }
 
 impl Parser {
@@ -18,11 +28,25 @@ impl Parser {
             current_token: TokenLiteral::new(Token::Start, None),
             peek_token: TokenLiteral::new(Token::Start, None),
             errors: Vec::new(),
+            prefix_fns: HashMap::new(),
+            infix_fns: HashMap::new(),
         };
 
+        result
+            .prefix_fns
+            .insert(Token::Ident, Parser::parse_identifier);
+
+        result.next_token();
         result.next_token();
 
         result
+    }
+
+    fn parse_identifier(&mut self) -> Option<Box<dyn Expression>> {
+        Some(Box::new(Identifier {
+            token: self.current_token.clone(),
+            value: self.current_token.value.clone().unwrap(),
+        }))
     }
 
     pub fn errors(&self) -> &[String] {
@@ -42,12 +66,38 @@ impl Parser {
         self.current_token = std::mem::replace(&mut self.peek_token, self.lexer.next_token());
     }
 
-    fn parse_statement(&mut self) -> Option<Box<dyn Statement>> {
+    fn parse_statement(&mut self) -> Box<dyn Statement> {
         match self.current_token.token {
             Token::Let => self.parse_let_statement(),
             Token::Return => self.parse_return_statement(),
-            _ => None,
+            _ => self.parse_expresion_statement(),
         }
+    }
+
+    fn parse_expresion_statement(&mut self) -> Box<dyn Statement> {
+        let mut statement = ExpressionStatement {
+            token: self.current_token.clone(),
+            value: None,
+        };
+
+        statement.value = self.parse_expresion(Token::Lowest);
+
+        if self.peek_token.token == Token::Semicolon {
+            self.next_token();
+        }
+
+        Box::new(statement)
+    }
+
+    fn parse_expresion(&mut self, token: Token) -> Option<Box<dyn Expression>> {
+        println!("{:?}", self.current_token.token);
+
+        if !self.prefix_fns.contains_key(&self.current_token.token) {
+            return None;
+        }
+
+        let prefix = self.prefix_fns[&self.current_token.token];
+        prefix(self)
     }
 
     fn expect_peek(&mut self, token: Token) -> bool {
@@ -58,7 +108,7 @@ impl Parser {
         true
     }
 
-    fn parse_return_statement(&mut self) -> Option<Box<dyn Statement>> {
+    fn parse_return_statement(&mut self) -> Box<dyn Statement> {
         let token = self.current_token.clone();
 
         self.next_token();
@@ -69,10 +119,10 @@ impl Parser {
             self.next_token();
         }
 
-        Some(Box::new(statement))
+        Box::new(statement)
     }
 
-    fn parse_let_statement(&mut self) -> Option<Box<dyn Statement>> {
+    fn parse_let_statement(&mut self) -> Box<dyn Statement> {
         self.expect_peek(Token::Ident);
 
         let token = self.current_token.clone();
@@ -85,7 +135,7 @@ impl Parser {
             self.next_token();
         }
 
-        Some(Box::new(statement))
+        Box::new(statement)
     }
 
     fn parse_program(&mut self) -> Program {
@@ -93,9 +143,9 @@ impl Parser {
 
         while self.current_token.token != Token::Eof {
             let statement = self.parse_statement();
-            if let Some(value) = statement {
-                program.statements.push(value);
-            }
+
+            program.statements.push(statement);
+
             self.next_token();
         }
 
@@ -105,11 +155,7 @@ impl Parser {
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        ast::{Node, Statement},
-        lexer::Lexer,
-        parser::Parser,
-    };
+    use crate::{ast::Statement, lexer::Lexer, parser::Parser};
 
     #[test]
     fn test_parser() {
@@ -132,6 +178,22 @@ mod test {
         for (statement, name) in program.statements.iter().zip(expected.iter()) {
             test_statement(statement.as_ref(), name);
         }
+    }
+
+    #[test]
+    fn test_identifier_expression() {
+        let input = "foobar;";
+
+        let lexer = Lexer::new(input.to_owned());
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        check_errors(&parser);
+
+        assert_eq!(program.statements.len(), 1);
+        let statement = &program.statements[0];
+
+        assert_eq!(statement.token_literal(), "foobar");
     }
 
     #[test]
