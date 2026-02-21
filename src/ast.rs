@@ -1,4 +1,5 @@
 use crate::token::TokenLiteral;
+use std::any::Any;
 
 pub trait Node {
     fn token_literal(&self) -> String;
@@ -7,20 +8,29 @@ pub trait Node {
 
 pub trait Statement: Node {
     fn statement_node(&self);
+    fn as_any(&self) -> &dyn Any;
     //fn value(&self) -> &dyn Expression;
 }
 
 pub trait Expression: Node {
     fn expression_node(&self);
+    fn as_any(&self) -> &dyn Any;
 }
 
 pub struct Program {
     pub statements: Vec<Box<dyn Statement>>,
 }
 
+#[derive(Debug)]
 pub struct Identifier {
     pub token: TokenLiteral,
     pub value: String,
+}
+
+#[derive(Debug)]
+pub struct IntegerLiteral {
+    pub token: TokenLiteral,
+    pub value: i64,
 }
 
 pub struct LetStatement {
@@ -69,6 +79,15 @@ impl ExpressionStatement {
     }
 }
 
+impl IntegerLiteral {
+    pub fn new(token: &TokenLiteral, value: i64) -> Self {
+        Self {
+            token: token.clone(),
+            value,
+        }
+    }
+}
+
 impl ReturnStatement {
     pub fn new(token: &TokenLiteral) -> Self {
         Self {
@@ -88,34 +107,40 @@ impl Node for Program {
     }
 
     fn string(&self) -> String {
-        return self
-            .statements
+        self.statements
             .iter()
             .map(|s| s.string())
             .collect::<Vec<_>>()
-            .join("");
+            .join("")
     }
 }
 
 impl Statement for LetStatement {
     fn statement_node(&self) {}
-    //fn value(&self) -> &dyn Expression {
-    //   &self.value
-    //}
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 impl Statement for ReturnStatement {
     fn statement_node(&self) {}
-    //fn value(&self) -> &dyn Expression {
-    //   &self.value
-    //}
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 impl Statement for ExpressionStatement {
     fn statement_node(&self) {}
-    //fn value(&self) -> &dyn Expression {
-    //   &self.value
-    //}
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+impl Statement for IntegerLiteral {
+    fn statement_node(&self) {}
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 impl Node for ReturnStatement {
@@ -156,6 +181,17 @@ impl Node for ExpressionStatement {
     }
 }
 
+impl Node for IntegerLiteral {
+    fn token_literal(&self) -> String {
+        self.token.value.clone().unwrap()
+    }
+
+    fn string(&self) -> String {
+        self.token.value.clone().unwrap()
+        //self.value.map_or(String::new(), |v| v.string())
+    }
+}
+
 impl Node for Identifier {
     fn token_literal(&self) -> String {
         self.token.value.clone().unwrap().to_string()
@@ -168,6 +204,16 @@ impl Node for Identifier {
 
 impl Expression for Identifier {
     fn expression_node(&self) {}
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+impl Expression for IntegerLiteral {
+    fn expression_node(&self) {}
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 #[cfg(test)]

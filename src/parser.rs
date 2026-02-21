@@ -1,9 +1,10 @@
-use std::{collections::HashMap, hash::Hash};
+use std::any::Any;
+use std::collections::HashMap;
 
 use crate::{
     ast::{
-        Expression, ExpressionStatement, Identifier, LetStatement, Program, ReturnStatement,
-        Statement,
+        Expression, ExpressionStatement, Identifier, IntegerLiteral, LetStatement, Program,
+        ReturnStatement, Statement,
     },
     lexer::Lexer,
     token::{Token, TokenLiteral},
@@ -36,6 +37,10 @@ impl Parser {
             .prefix_fns
             .insert(Token::Ident, Parser::parse_identifier);
 
+        result
+            .prefix_fns
+            .insert(Token::Int, Parser::parse_integer_literal);
+
         result.next_token();
         result.next_token();
 
@@ -46,6 +51,13 @@ impl Parser {
         Some(Box::new(Identifier {
             token: self.current_token.clone(),
             value: self.current_token.value.clone().unwrap(),
+        }))
+    }
+
+    fn parse_integer_literal(&mut self) -> Option<Box<dyn Expression>> {
+        Some(Box::new(IntegerLiteral {
+            token: self.current_token.clone(),
+            value: self.current_token.value.clone().unwrap().parse().unwrap(),
         }))
     }
 
@@ -90,8 +102,6 @@ impl Parser {
     }
 
     fn parse_expresion(&mut self, token: Token) -> Option<Box<dyn Expression>> {
-        println!("{:?}", self.current_token.token);
-
         if !self.prefix_fns.contains_key(&self.current_token.token) {
             return None;
         }
@@ -155,7 +165,11 @@ impl Parser {
 
 #[cfg(test)]
 mod test {
-    use crate::{ast::Statement, lexer::Lexer, parser::Parser};
+    use crate::{
+        ast::{ExpressionStatement, Identifier, IntegerLiteral, Statement},
+        lexer::Lexer,
+        parser::Parser,
+    };
 
     #[test]
     fn test_parser() {
@@ -191,9 +205,40 @@ mod test {
         check_errors(&parser);
 
         assert_eq!(program.statements.len(), 1);
-        let statement = &program.statements[0];
 
-        assert_eq!(statement.token_literal(), "foobar");
+        let statement = &program.statements[0];
+        let stmt = statement
+            .as_any()
+            .downcast_ref::<ExpressionStatement>()
+            .and_then(|s| s.value.as_ref())
+            .and_then(|v| v.as_any().downcast_ref::<Identifier>())
+            .expect("expected Identifier");
+
+        assert!(stmt.value == "foobar");
+    }
+
+    #[test]
+    fn test_integer_expression() {
+        let input = "5;";
+
+        let lexer = Lexer::new(input.to_owned());
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        check_errors(&parser);
+
+        assert_eq!(program.statements.len(), 1);
+
+        let statement = program.statements[0].as_ref();
+
+        let stmt = statement
+            .as_any()
+            .downcast_ref::<ExpressionStatement>()
+            .and_then(|s| s.value.as_ref())
+            .and_then(|v| v.as_any().downcast_ref::<IntegerLiteral>())
+            .expect("expected IntegerLiteral");
+
+        assert!(stmt.value == 5);
     }
 
     #[test]
