@@ -1,24 +1,21 @@
+use std::default;
+
 use crate::token::TokenLiteral;
-use std::any::Any;
 
-pub trait Node {
-    fn token_literal(&self) -> String;
-    fn string(&self) -> String;
+pub enum Statement {
+    Let(LetStatement),
+    Return(ReturnStatement),
+    Expression(ExpressionStatement),
 }
 
-pub trait Statement: Node {
-    fn statement_node(&self);
-    fn as_any(&self) -> &dyn Any;
-    //fn value(&self) -> &dyn Expression;
+pub enum Expression {
+    Identifier(Identifier),
+    IntegerLiteral(IntegerLiteral),
 }
 
-pub trait Expression: Node {
-    fn expression_node(&self);
-    fn as_any(&self) -> &dyn Any;
-}
-
+#[derive(Default)]
 pub struct Program {
-    pub statements: Vec<Box<dyn Statement>>,
+    pub statements: Vec<Statement>,
 }
 
 #[derive(Debug)]
@@ -36,68 +33,20 @@ pub struct IntegerLiteral {
 pub struct LetStatement {
     pub token: TokenLiteral,
     pub name: Identifier,
-    pub value: Option<Box<dyn Expression>>,
+    pub value: Option<Expression>,
 }
 
 pub struct ReturnStatement {
     pub token: TokenLiteral,
-    pub value: Option<Box<dyn Expression>>,
+    pub value: Option<Expression>,
 }
 
 pub struct ExpressionStatement {
     pub token: TokenLiteral,
-    pub value: Option<Box<dyn Expression>>,
+    pub value: Option<Expression>,
 }
 
 impl Program {
-    pub fn new() -> Self {
-        Self {
-            statements: Vec::new(),
-        }
-    }
-}
-
-impl LetStatement {
-    pub fn new(token: &TokenLiteral, identifier: &TokenLiteral) -> Self {
-        Self {
-            token: token.clone(),
-            name: Identifier {
-                token: identifier.clone(),
-                value: identifier.value.clone().unwrap(),
-            },
-            value: None,
-        }
-    }
-}
-
-impl ExpressionStatement {
-    pub fn new(token: &TokenLiteral) -> Self {
-        Self {
-            token: token.clone(),
-            value: None,
-        }
-    }
-}
-
-impl IntegerLiteral {
-    pub fn new(token: &TokenLiteral, value: i64) -> Self {
-        Self {
-            token: token.clone(),
-            value,
-        }
-    }
-}
-
-impl ReturnStatement {
-    pub fn new(token: &TokenLiteral) -> Self {
-        Self {
-            token: token.clone(),
-            value: None,
-        }
-    }
-}
-
-impl Node for Program {
     fn token_literal(&self) -> String {
         if self.statements.is_empty() {
             "".to_owned()
@@ -115,48 +64,61 @@ impl Node for Program {
     }
 }
 
-impl Statement for LetStatement {
-    fn statement_node(&self) {}
-    fn as_any(&self) -> &dyn Any {
-        self
+impl Expression {
+    fn expression_node(&self) {
+        match self {
+            Self::Identifier(expr) => expr.expression_node(),
+            Self::IntegerLiteral(expr) => expr.expression_node(),
+        }
     }
-}
 
-impl Statement for ReturnStatement {
-    fn statement_node(&self) {}
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-}
-
-impl Statement for ExpressionStatement {
-    fn statement_node(&self) {}
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-}
-
-impl Statement for IntegerLiteral {
-    fn statement_node(&self) {}
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-}
-
-impl Node for ReturnStatement {
-    fn token_literal(&self) -> String {
-        self.token.value.clone().unwrap().to_string()
-    }
     fn string(&self) -> String {
-        format!(
-            "{} {};",
-            self.token_literal(),
-            self.value.as_ref().map_or(String::new(), |v| v.string())
-        )
+        match self {
+            Self::Identifier(expr) => expr.string(),
+            Self::IntegerLiteral(expr) => expr.string(),
+        }
+    }
+
+    fn token_literal(&self) -> String {
+        match self {
+            Self::Identifier(expr) => expr.token_literal(),
+            Self::IntegerLiteral(expr) => expr.token_literal(),
+        }
     }
 }
 
-impl Node for LetStatement {
+impl Statement {
+    pub fn token_literal(&self) -> String {
+        match self {
+            Self::Let(stmt) => stmt.token_literal(),
+            Self::Return(stmt) => stmt.token_literal(),
+            Self::Expression(stmt) => stmt.token_literal(),
+        }
+    }
+
+    pub fn string(&self) -> String {
+        match self {
+            Self::Let(stmt) => stmt.string(),
+            Self::Return(stmt) => stmt.string(),
+            Self::Expression(stmt) => stmt.string(),
+        }
+    }
+
+    fn statement_node(&self) {}
+}
+
+impl LetStatement {
+    pub fn new(token: &TokenLiteral, identifier: &TokenLiteral) -> Self {
+        Self {
+            token: token.clone(),
+            name: Identifier {
+                token: identifier.clone(),
+                value: identifier.value.clone().unwrap(),
+            },
+            value: None,
+        }
+    }
+
     fn token_literal(&self) -> String {
         self.token.value.clone().unwrap().to_string()
     }
@@ -171,7 +133,14 @@ impl Node for LetStatement {
     }
 }
 
-impl Node for ExpressionStatement {
+impl ExpressionStatement {
+    pub fn new(token: &TokenLiteral) -> Self {
+        Self {
+            token: token.clone(),
+            value: None,
+        }
+    }
+
     fn token_literal(&self) -> String {
         self.token.value.clone().unwrap().to_string()
     }
@@ -181,18 +150,40 @@ impl Node for ExpressionStatement {
     }
 }
 
-impl Node for IntegerLiteral {
+impl ReturnStatement {
+    pub fn new(token: &TokenLiteral) -> Self {
+        Self {
+            token: token.clone(),
+            value: None,
+        }
+    }
+
+    fn token_literal(&self) -> String {
+        self.token.value.clone().unwrap().to_string()
+    }
+
+    fn string(&self) -> String {
+        format!(
+            "{} {};",
+            self.token_literal(),
+            self.value.as_ref().map_or(String::new(), |v| v.string())
+        )
+    }
+}
+
+impl IntegerLiteral {
     fn token_literal(&self) -> String {
         self.token.value.clone().unwrap()
     }
 
     fn string(&self) -> String {
         self.token.value.clone().unwrap()
-        //self.value.map_or(String::new(), |v| v.string())
     }
+
+    fn expression_node(&self) {}
 }
 
-impl Node for Identifier {
+impl Identifier {
     fn token_literal(&self) -> String {
         self.token.value.clone().unwrap().to_string()
     }
@@ -200,33 +191,21 @@ impl Node for Identifier {
     fn string(&self) -> String {
         self.value.clone()
     }
-}
 
-impl Expression for Identifier {
     fn expression_node(&self) {}
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-}
-
-impl Expression for IntegerLiteral {
-    fn expression_node(&self) {}
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 }
 
 #[cfg(test)]
 mod test {
     use crate::{
-        ast::{Identifier, LetStatement, Node, Program},
+        ast::{Identifier, LetStatement, Program, Statement},
         token::{Token, TokenLiteral},
     };
 
     #[test]
     fn test_string() {
         let input = Program {
-            statements: vec![Box::new(LetStatement {
+            statements: vec![Statement::Let(LetStatement {
                 token: TokenLiteral {
                     token: Token::Let,
                     value: Some("let".to_owned()),
@@ -238,7 +217,7 @@ mod test {
                     },
                     value: "myVar".to_owned(),
                 },
-                value: Some(Box::new(Identifier {
+                value: Some(crate::ast::Expression::Identifier(Identifier {
                     token: TokenLiteral {
                         token: Token::Ident,
                         value: Some("anotherVar".to_owned()),

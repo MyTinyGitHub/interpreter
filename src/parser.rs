@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::collections::HashMap;
 
 use crate::{
@@ -10,8 +9,8 @@ use crate::{
     token::{Token, TokenLiteral},
 };
 
-type PrefixParserFn = fn(&mut Parser) -> Option<Box<dyn Expression>>;
-type InfixParserFn = fn(&mut Parser, dyn Expression) -> Option<Box<dyn Expression>>;
+type PrefixParserFn = fn(&mut Parser) -> Expression;
+type InfixParserFn = fn(&mut Parser, &Expression) -> Expression;
 
 struct Parser {
     lexer: Lexer,
@@ -47,18 +46,18 @@ impl Parser {
         result
     }
 
-    fn parse_identifier(&mut self) -> Option<Box<dyn Expression>> {
-        Some(Box::new(Identifier {
+    fn parse_identifier(&mut self) -> Expression {
+        Expression::Identifier(Identifier {
             token: self.current_token.clone(),
             value: self.current_token.value.clone().unwrap(),
-        }))
+        })
     }
 
-    fn parse_integer_literal(&mut self) -> Option<Box<dyn Expression>> {
-        Some(Box::new(IntegerLiteral {
+    fn parse_integer_literal(&mut self) -> Expression {
+        Expression::IntegerLiteral(IntegerLiteral {
             token: self.current_token.clone(),
             value: self.current_token.value.clone().unwrap().parse().unwrap(),
-        }))
+        })
     }
 
     pub fn errors(&self) -> &[String] {
@@ -78,7 +77,7 @@ impl Parser {
         self.current_token = std::mem::replace(&mut self.peek_token, self.lexer.next_token());
     }
 
-    fn parse_statement(&mut self) -> Box<dyn Statement> {
+    fn parse_statement(&mut self) -> Statement {
         match self.current_token.token {
             Token::Let => self.parse_let_statement(),
             Token::Return => self.parse_return_statement(),
@@ -86,7 +85,7 @@ impl Parser {
         }
     }
 
-    fn parse_expresion_statement(&mut self) -> Box<dyn Statement> {
+    fn parse_expresion_statement(&mut self) -> Statement {
         let mut statement = ExpressionStatement {
             token: self.current_token.clone(),
             value: None,
@@ -98,16 +97,17 @@ impl Parser {
             self.next_token();
         }
 
-        Box::new(statement)
+        Statement::Expression(statement)
     }
 
-    fn parse_expresion(&mut self, token: Token) -> Option<Box<dyn Expression>> {
+    fn parse_expresion(&mut self, token: Token) -> Option<Expression> {
         if !self.prefix_fns.contains_key(&self.current_token.token) {
             return None;
         }
 
         let prefix = self.prefix_fns[&self.current_token.token];
-        prefix(self)
+
+        Some(prefix(self))
     }
 
     fn expect_peek(&mut self, token: Token) -> bool {
@@ -118,7 +118,7 @@ impl Parser {
         true
     }
 
-    fn parse_return_statement(&mut self) -> Box<dyn Statement> {
+    fn parse_return_statement(&mut self) -> Statement {
         let token = self.current_token.clone();
 
         self.next_token();
@@ -129,10 +129,10 @@ impl Parser {
             self.next_token();
         }
 
-        Box::new(statement)
+        Statement::Return(statement)
     }
 
-    fn parse_let_statement(&mut self) -> Box<dyn Statement> {
+    fn parse_let_statement(&mut self) -> Statement {
         self.expect_peek(Token::Ident);
 
         let token = self.current_token.clone();
@@ -145,11 +145,11 @@ impl Parser {
             self.next_token();
         }
 
-        Box::new(statement)
+        Statement::Let(statement)
     }
 
     fn parse_program(&mut self) -> Program {
-        let mut program = Program::new();
+        let mut program = Program::default();
 
         while self.current_token.token != Token::Eof {
             let statement = self.parse_statement();
@@ -165,8 +165,10 @@ impl Parser {
 
 #[cfg(test)]
 mod test {
+    use core::panic;
+
     use crate::{
-        ast::{ExpressionStatement, Identifier, IntegerLiteral, Statement},
+        ast::{Expression, Statement},
         lexer::Lexer,
         parser::Parser,
     };
@@ -190,7 +192,7 @@ mod test {
         assert_eq!(program.statements.len(), expected.len());
 
         for (statement, name) in program.statements.iter().zip(expected.iter()) {
-            test_statement(statement.as_ref(), name);
+            test_statement(statement, name);
         }
     }
 
@@ -207,14 +209,14 @@ mod test {
         assert_eq!(program.statements.len(), 1);
 
         let statement = &program.statements[0];
-        let stmt = statement
-            .as_any()
-            .downcast_ref::<ExpressionStatement>()
-            .and_then(|s| s.value.as_ref())
-            .and_then(|v| v.as_any().downcast_ref::<Identifier>())
-            .expect("expected Identifier");
 
-        assert!(stmt.value == "foobar");
+        match statement {
+            Statement::Expression(s) => match s.value.as_ref().unwrap() {
+                Expression::Identifier(expr) => assert_eq!(expr.value, "foobar"),
+                _ => panic!(),
+            },
+            _ => panic!(),
+        }
     }
 
     #[test]
@@ -229,16 +231,15 @@ mod test {
 
         assert_eq!(program.statements.len(), 1);
 
-        let statement = program.statements[0].as_ref();
+        let statement = &program.statements[0];
 
-        let stmt = statement
-            .as_any()
-            .downcast_ref::<ExpressionStatement>()
-            .and_then(|s| s.value.as_ref())
-            .and_then(|v| v.as_any().downcast_ref::<IntegerLiteral>())
-            .expect("expected IntegerLiteral");
-
-        assert!(stmt.value == 5);
+        match statement {
+            Statement::Expression(s) => match s.value.as_ref().unwrap() {
+                Expression::IntegerLiteral(expr) => assert_eq!(expr.value, 5),
+                _ => panic!(),
+            },
+            _ => panic!(),
+        }
     }
 
     #[test]
@@ -256,15 +257,15 @@ mod test {
         check_errors(&parser);
 
         for statement in program.statements.iter() {
-            return_statement(statement.as_ref());
+            return_statement(statement);
         }
     }
 
-    fn test_statement(statement: &dyn Statement, name: &str) {
+    fn test_statement(statement: &Statement, name: &str) {
         assert_eq!(statement.token_literal().as_str(), "let");
     }
 
-    fn return_statement(statement: &dyn Statement) {
+    fn return_statement(statement: &Statement) {
         assert_eq!(statement.token_literal().as_str(), "return");
     }
 
