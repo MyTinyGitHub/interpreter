@@ -10,7 +10,7 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn new(input: String) -> Self {
+    pub fn new(input: &str) -> Self {
         let mut result = Self {
             input: input.as_bytes().to_owned(),
             position: 0,
@@ -196,8 +196,7 @@ fn test_next_token() {
 
         10 == 10;
         1 != 4;
-        "#
-    .to_owned();
+        "#;
 
     let expectation = [
         TokenLiteral::new(Token::Let, Some("let".to_owned())),
@@ -289,7 +288,7 @@ fn test_next_token() {
 
 #[test]
 fn test_token() {
-    let input = " \n =+(){}".to_owned();
+    let input = " \n =+(){}";
     let expectation = [
         TokenLiteral::new(Token::Assign, Some("=".to_owned())),
         TokenLiteral::new(Token::Plus, Some("+".to_owned())),

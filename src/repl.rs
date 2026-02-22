@@ -15,7 +15,7 @@ pub fn repl_loop() {
             break;
         }
 
-        let mut token_processor = Lexer::new(input);
+        let mut token_processor = Lexer::new(&input);
 
         loop {
             let token = token_processor.next_token();

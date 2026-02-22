@@ -9,6 +9,7 @@ pub enum Statement {
 pub enum Expression {
     Identifier(Identifier),
     IntegerLiteral(IntegerLiteral),
+    Prefix(PrefixExpression),
 }
 
 #[derive(Default)]
@@ -39,6 +40,12 @@ pub struct ReturnStatement {
     pub value: Option<Expression>,
 }
 
+pub struct PrefixExpression {
+    pub token: TokenLiteral,
+    pub operator: String,
+    pub right: Box<Expression>,
+}
+
 pub struct ExpressionStatement {
     pub token: TokenLiteral,
     pub value: Option<Expression>,
@@ -67,6 +74,7 @@ impl Expression {
         match self {
             Self::Identifier(expr) => expr.expression_node(),
             Self::IntegerLiteral(expr) => expr.expression_node(),
+            Self::Prefix(expr) => expr.expression_node(),
         }
     }
 
@@ -74,6 +82,7 @@ impl Expression {
         match self {
             Self::Identifier(expr) => expr.string(),
             Self::IntegerLiteral(expr) => expr.string(),
+            Self::Prefix(expr) => expr.string(),
         }
     }
 
@@ -81,6 +90,7 @@ impl Expression {
         match self {
             Self::Identifier(expr) => expr.token_literal(),
             Self::IntegerLiteral(expr) => expr.token_literal(),
+            Self::Prefix(expr) => expr.token_literal(),
         }
     }
 }
@@ -188,6 +198,18 @@ impl Identifier {
 
     fn string(&self) -> String {
         self.value.clone()
+    }
+
+    fn expression_node(&self) {}
+}
+
+impl PrefixExpression {
+    fn token_literal(&self) -> String {
+        self.token.value.clone().unwrap()
+    }
+
+    fn string(&self) -> String {
+        format!("({}{})", self.operator, self.right.string())
     }
 
     fn expression_node(&self) {}

@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        Expression, ExpressionStatement, Identifier, IntegerLiteral, LetStatement, Program,
-        ReturnStatement, Statement,
+        Expression, ExpressionStatement, Identifier, IntegerLiteral, LetStatement,
+        PrefixExpression, Program, ReturnStatement, Statement,
     },
     lexer::Lexer,
     token::{Token, TokenLiteral},
@@ -40,6 +40,14 @@ impl Parser {
             .prefix_fns
             .insert(Token::Int, Parser::parse_integer_literal);
 
+        result
+            .prefix_fns
+            .insert(Token::Bang, Parser::parse_prefix_expression);
+
+        result
+            .prefix_fns
+            .insert(Token::Minus, Parser::parse_prefix_expression);
+
         result.next_token();
         result.next_token();
 
@@ -50,6 +58,19 @@ impl Parser {
         Expression::Identifier(Identifier {
             token: self.current_token.clone(),
             value: self.current_token.value.clone().unwrap(),
+        })
+    }
+
+    fn parse_prefix_expression(&mut self) -> Expression {
+        let token = self.current_token.clone();
+        let operator = self.current_token.value.clone().unwrap();
+
+        self.next_token();
+
+        Expression::Prefix(PrefixExpression {
+            token,
+            operator,
+            right: Box::new(self.parse_integer_literal()),
         })
     }
 
@@ -64,9 +85,15 @@ impl Parser {
         &self.errors
     }
 
-    pub fn peek_error(&mut self, token: &Token) {
+    fn no_prefix_operator_error(&mut self, token: &Token) {
+        let msg = format!("no prefix operation found for token {:?}", token);
+
+        self.errors.push(msg);
+    }
+
+    fn peek_error(&mut self, token: &Token) {
         let msg = format!(
-            "expected next toekn to be {:?}, got {:?} instead",
+            "expected next token to be {:?}, got {:?} instead",
             token, self.peek_token
         );
 
@@ -101,11 +128,14 @@ impl Parser {
     }
 
     fn parse_expresion(&mut self, token: Token) -> Option<Expression> {
-        if !self.prefix_fns.contains_key(&self.current_token.token) {
+        let cur_token = self.current_token.token.clone();
+
+        if !self.prefix_fns.contains_key(&cur_token) {
+            self.no_prefix_operator_error(&cur_token);
             return None;
         }
 
-        let prefix = self.prefix_fns[&self.current_token.token];
+        let prefix = self.prefix_fns[&cur_token];
 
         Some(prefix(self))
     }
@@ -181,7 +211,7 @@ mod test {
             let foobar = 838383;
         "#;
 
-        let lexer = Lexer::new(input.to_owned());
+        let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
 
         let program = parser.parse_program();
@@ -200,7 +230,7 @@ mod test {
     fn test_identifier_expression() {
         let input = "foobar;";
 
-        let lexer = Lexer::new(input.to_owned());
+        let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
 
         let program = parser.parse_program();
@@ -223,7 +253,7 @@ mod test {
     fn test_integer_expression() {
         let input = "5;";
 
-        let lexer = Lexer::new(input.to_owned());
+        let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
 
         let program = parser.parse_program();
@@ -234,10 +264,16 @@ mod test {
         let statement = &program.statements[0];
 
         match statement {
-            Statement::Expression(s) => match s.value.as_ref().unwrap() {
-                Expression::IntegerLiteral(expr) => assert_eq!(expr.value, 5),
-                _ => panic!(),
-            },
+            Statement::Expression(s) => {
+                test_integer_literal_expression(s.value.as_ref().unwrap(), 5)
+            }
+            _ => panic!(),
+        }
+    }
+
+    fn test_integer_literal_expression(expression: &Expression, value: i64) {
+        match expression {
+            Expression::IntegerLiteral(expr) => assert_eq!(expr.value, value),
             _ => panic!(),
         }
     }
@@ -250,7 +286,7 @@ mod test {
             return 993322;
         "#;
 
-        let lexer = Lexer::new(input.to_owned());
+        let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
 
         let program = parser.parse_program();
@@ -258,6 +294,33 @@ mod test {
 
         for statement in program.statements.iter() {
             return_statement(statement);
+        }
+    }
+
+    #[test]
+    fn test_prefix_opertor() {
+        let inputs = ["!5;", "-15;"];
+        let expected = [("!", 5), ("-", 15)];
+
+        for (input, (expected_prefix, expected_value)) in inputs.iter().zip(expected) {
+            let lexer = Lexer::new(input);
+            let mut parser = Parser::new(lexer);
+
+            let program = parser.parse_program();
+            check_errors(&parser);
+
+            let statement = &program.statements[0];
+
+            match statement {
+                Statement::Expression(s) => match s.value.as_ref().unwrap() {
+                    Expression::Prefix(expr) => {
+                        assert_eq!(expr.operator, expected_prefix);
+                        test_integer_literal_expression(&expr.right, expected_value);
+                    }
+                    _ => panic!(),
+                },
+                _ => panic!(),
+            }
         }
     }
 
