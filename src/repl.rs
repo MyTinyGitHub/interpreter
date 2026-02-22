@@ -1,6 +1,6 @@
 use std::io;
 
-use crate::{lexer::Lexer, token::Token};
+use crate::{lexer::Lexer, parser::Parser};
 
 pub fn repl_loop() {
     loop {
@@ -15,15 +15,13 @@ pub fn repl_loop() {
             break;
         }
 
-        let mut token_processor = Lexer::new(&input);
+        let token_processor = Lexer::new(&input);
+        let mut parser = Parser::new(token_processor);
+        let program = parser.parse_program();
 
-        loop {
-            let token = token_processor.next_token();
-            if token.token == Token::Eof {
-                break;
-            }
-
-            println!("{:?}", token);
+        println!("{:?}", program.string());
+        for statement in program.statements {
+            println!("{:?}", statement);
         }
     }
 }

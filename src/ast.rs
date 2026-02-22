@@ -1,15 +1,18 @@
 use crate::token::TokenLiteral;
 
+#[derive(Debug)]
 pub enum Statement {
     Let(LetStatement),
     Return(ReturnStatement),
     Expression(ExpressionStatement),
 }
 
+#[derive(Debug)]
 pub enum Expression {
     Identifier(Identifier),
     IntegerLiteral(IntegerLiteral),
     Prefix(PrefixExpression),
+    Infix(InfixExpression),
 }
 
 #[derive(Default)]
@@ -29,23 +32,35 @@ pub struct IntegerLiteral {
     pub value: i64,
 }
 
+#[derive(Debug)]
 pub struct LetStatement {
     pub token: TokenLiteral,
     pub name: Identifier,
     pub value: Option<Expression>,
 }
 
+#[derive(Debug)]
 pub struct ReturnStatement {
     pub token: TokenLiteral,
     pub value: Option<Expression>,
 }
 
+#[derive(Debug)]
 pub struct PrefixExpression {
     pub token: TokenLiteral,
     pub operator: String,
     pub right: Box<Expression>,
 }
 
+#[derive(Debug)]
+pub struct InfixExpression {
+    pub token: TokenLiteral,
+    pub operator: String,
+    pub right: Box<Expression>,
+    pub left: Box<Expression>,
+}
+
+#[derive(Debug)]
 pub struct ExpressionStatement {
     pub token: TokenLiteral,
     pub value: Option<Expression>,
@@ -60,7 +75,7 @@ impl Program {
         }
     }
 
-    fn string(&self) -> String {
+    pub fn string(&self) -> String {
         self.statements
             .iter()
             .map(|s| s.string())
@@ -75,6 +90,7 @@ impl Expression {
             Self::Identifier(expr) => expr.expression_node(),
             Self::IntegerLiteral(expr) => expr.expression_node(),
             Self::Prefix(expr) => expr.expression_node(),
+            Self::Infix(expr) => expr.expression_node(),
         }
     }
 
@@ -83,6 +99,7 @@ impl Expression {
             Self::Identifier(expr) => expr.string(),
             Self::IntegerLiteral(expr) => expr.string(),
             Self::Prefix(expr) => expr.string(),
+            Self::Infix(expr) => expr.string(),
         }
     }
 
@@ -91,6 +108,7 @@ impl Expression {
             Self::Identifier(expr) => expr.token_literal(),
             Self::IntegerLiteral(expr) => expr.token_literal(),
             Self::Prefix(expr) => expr.token_literal(),
+            Self::Infix(expr) => expr.token_literal(),
         }
     }
 }
@@ -210,6 +228,23 @@ impl PrefixExpression {
 
     fn string(&self) -> String {
         format!("({}{})", self.operator, self.right.string())
+    }
+
+    fn expression_node(&self) {}
+}
+
+impl InfixExpression {
+    fn token_literal(&self) -> String {
+        self.token.value.clone().unwrap()
+    }
+
+    fn string(&self) -> String {
+        format!(
+            "({} {} {})",
+            self.left.string(),
+            self.operator,
+            self.right.string()
+        )
     }
 
     fn expression_node(&self) {}

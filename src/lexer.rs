@@ -130,12 +130,13 @@ impl Lexer {
 
     fn read_identifier(&mut self) -> String {
         let position = self.read_position - 1;
-        loop {
-            if !self.ch.unwrap().is_ascii_alphabetic() {
+
+        while let Some(ch) = self.ch {
+            if ch.is_ascii_alphabetic() {
+                self.read_char();
+            } else {
                 break;
             }
-
-            self.read_char();
         }
 
         String::from_utf8(self.input[position..self.read_position - 1].to_owned()).unwrap()
@@ -143,12 +144,13 @@ impl Lexer {
 
     fn read_number(&mut self) -> String {
         let position = self.read_position - 1;
-        loop {
-            if !self.ch.unwrap().is_ascii_digit() {
+
+        while let Some(ch) = self.ch {
+            if ch.is_ascii_digit() {
+                self.read_char();
+            } else {
                 break;
             }
-
-            self.read_char();
         }
 
         String::from_utf8(self.input[position..self.read_position - 1].to_owned()).unwrap()

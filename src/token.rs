@@ -1,8 +1,18 @@
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(i64)]
+pub enum Precedence {
+    Lowest = 1,
+    Equals = 2,
+    Lessgreater = 3,
+    Sum = 4,
+    Product = 5,
+    Prefix = 6,
+    Call = 7,
+}
+
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum Token {
     Start,
-    Lowest,
-    Equals,
     Lessgreater,
     Sum,
     Product,
@@ -51,5 +61,15 @@ pub struct TokenLiteral {
 impl TokenLiteral {
     pub fn new(token: Token, value: Option<String>) -> Self {
         Self { token, value }
+    }
+
+    pub fn precedence(&self) -> Precedence {
+        match self.token {
+            Token::Equal | Token::Notequal => Precedence::Equals,
+            Token::Lt | Token::Gt => Precedence::Lessgreater,
+            Token::Plus | Token::Minus => Precedence::Sum,
+            Token::Asterisk | Token::Slash => Precedence::Product,
+            _ => Precedence::Lowest,
+        }
     }
 }
