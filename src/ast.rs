@@ -11,6 +11,7 @@ pub enum Statement {
 pub enum Expression {
     Identifier(Identifier),
     IntegerLiteral(IntegerLiteral),
+    Boolean(BooleanLiteral),
     Prefix(PrefixExpression),
     Infix(InfixExpression),
 }
@@ -30,6 +31,12 @@ pub struct Identifier {
 pub struct IntegerLiteral {
     pub token: TokenLiteral,
     pub value: i64,
+}
+
+#[derive(Debug)]
+pub struct BooleanLiteral {
+    pub token: TokenLiteral,
+    pub value: bool,
 }
 
 #[derive(Debug)]
@@ -91,6 +98,7 @@ impl Expression {
             Self::IntegerLiteral(expr) => expr.expression_node(),
             Self::Prefix(expr) => expr.expression_node(),
             Self::Infix(expr) => expr.expression_node(),
+            Self::Boolean(expr) => expr.expression_node(),
         }
     }
 
@@ -100,6 +108,7 @@ impl Expression {
             Self::IntegerLiteral(expr) => expr.string(),
             Self::Prefix(expr) => expr.string(),
             Self::Infix(expr) => expr.string(),
+            Self::Boolean(expr) => expr.string(),
         }
     }
 
@@ -109,6 +118,7 @@ impl Expression {
             Self::IntegerLiteral(expr) => expr.token_literal(),
             Self::Prefix(expr) => expr.token_literal(),
             Self::Infix(expr) => expr.token_literal(),
+            Self::Boolean(expr) => expr.token_literal(),
         }
     }
 }
@@ -198,6 +208,18 @@ impl ReturnStatement {
 }
 
 impl IntegerLiteral {
+    fn token_literal(&self) -> String {
+        self.token.value.clone().unwrap()
+    }
+
+    fn string(&self) -> String {
+        self.token.value.clone().unwrap()
+    }
+
+    fn expression_node(&self) {}
+}
+
+impl BooleanLiteral {
     fn token_literal(&self) -> String {
         self.token.value.clone().unwrap()
     }

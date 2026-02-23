@@ -102,7 +102,7 @@ impl Lexer {
                     return TokenLiteral::new(Token::Ident, Some(identifier));
                 }
 
-                if self.ch.unwrap().is_ascii_digit() {
+                if let Some(ch) = self.ch {
                     return TokenLiteral::new(Token::Int, Some(self.read_number()));
                 }
 
@@ -115,16 +115,12 @@ impl Lexer {
     }
 
     fn skip_white_space(&mut self) {
-        loop {
-            if self.ch.is_none() {
+        while let Some(ch) = self.ch {
+            if !ch.is_ascii_whitespace() {
                 break;
             }
-            if self.ch.unwrap().is_ascii_whitespace() {
-                self.read_char();
-                continue;
-            }
 
-            break;
+            self.read_char();
         }
     }
 

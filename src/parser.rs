@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        Expression, ExpressionStatement, Identifier, InfixExpression, IntegerLiteral, LetStatement,
-        PrefixExpression, Program, ReturnStatement, Statement,
+        BooleanLiteral, Expression, ExpressionStatement, Identifier, InfixExpression,
+        IntegerLiteral, LetStatement, PrefixExpression, Program, ReturnStatement, Statement,
     },
     lexer::Lexer,
     token::{Precedence, Token, TokenLiteral},
@@ -48,6 +48,12 @@ impl Parser {
             .prefix_fns
             .insert(Token::Minus, Parser::parse_prefix_expression);
 
+        result.prefix_fns.insert(Token::True, Parser::parse_boolean);
+
+        result
+            .prefix_fns
+            .insert(Token::False, Parser::parse_boolean);
+
         result
             .infix_fns
             .insert(Token::Plus, Parser::parse_infix_expression);
@@ -90,6 +96,20 @@ impl Parser {
         Expression::Identifier(Identifier {
             token: self.current_token.clone(),
             value: self.current_token.value.clone().unwrap(),
+        })
+    }
+
+    fn parse_boolean(&mut self) -> Expression {
+        Expression::Boolean(BooleanLiteral {
+            token: self.current_token.clone(),
+            value: match self.current_token.token {
+                Token::True => true,
+                Token::False => false,
+                _ => panic!(
+                    "Expected boolean token found {:?}",
+                    self.current_token.token
+                ),
+            },
         })
     }
 
@@ -334,9 +354,41 @@ mod test {
         }
     }
 
+    #[test]
+    fn test_boolean_expression() {
+        let inputs = ["true;", "false"];
+        let results = [true, false];
+
+        for (input, result) in inputs.iter().zip(results) {
+            let lexer = Lexer::new(input);
+            let mut parser = Parser::new(lexer);
+
+            let program = parser.parse_program();
+            check_errors(&parser);
+
+            assert_eq!(program.statements.len(), 1);
+
+            let statement = &program.statements[0];
+
+            match statement {
+                Statement::Expression(s) => {
+                    test_boolean_literal_expression(s.value.as_ref().unwrap(), result)
+                }
+                _ => panic!(),
+            }
+        }
+    }
+
     fn test_integer_literal_expression(expression: &Expression, value: i64) {
         match expression {
             Expression::IntegerLiteral(expr) => assert_eq!(expr.value, value),
+            _ => panic!(),
+        }
+    }
+
+    fn test_boolean_literal_expression(expression: &Expression, value: bool) {
+        match expression {
+            Expression::Boolean(expr) => assert_eq!(expr.value, value),
             _ => panic!(),
         }
     }
