@@ -56,21 +56,21 @@ pub struct ReturnStatement {
 pub struct PrefixExpression {
     pub token: TokenLiteral,
     pub operator: String,
-    pub right: Box<Expression>,
+    pub right: Option<Box<Expression>>,
 }
 
 #[derive(Debug)]
 pub struct InfixExpression {
     pub token: TokenLiteral,
     pub operator: String,
-    pub right: Box<Expression>,
-    pub left: Box<Expression>,
+    pub right: Option<Box<Expression>>,
+    pub left: Option<Box<Expression>>,
 }
 
 #[derive(Debug)]
 pub struct ExpressionStatement {
     pub token: TokenLiteral,
-    pub value: Option<Expression>,
+    pub value: Option<Box<Expression>>,
 }
 
 impl Program {
@@ -102,7 +102,7 @@ impl Expression {
         }
     }
 
-    fn string(&self) -> String {
+    pub fn string(&self) -> String {
         match self {
             Self::Identifier(expr) => expr.string(),
             Self::IntegerLiteral(expr) => expr.string(),
@@ -249,7 +249,14 @@ impl PrefixExpression {
     }
 
     fn string(&self) -> String {
-        format!("({}{})", self.operator, self.right.string())
+        format!(
+            "({}{})",
+            self.operator,
+            match self.right.as_ref() {
+                None => String::new(),
+                Some(v) => v.string(),
+            }
+        )
     }
 
     fn expression_node(&self) {}
@@ -263,9 +270,12 @@ impl InfixExpression {
     fn string(&self) -> String {
         format!(
             "({} {} {})",
-            self.left.string(),
+            self.left.as_ref().map_or(String::new(), |v| v.string()),
             self.operator,
-            self.right.string()
+            match self.right.as_ref() {
+                None => String::new(),
+                Some(v) => v.string(),
+            }
         )
     }
 

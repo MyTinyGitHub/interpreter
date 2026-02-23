@@ -102,7 +102,7 @@ impl Lexer {
                     return TokenLiteral::new(Token::Ident, Some(identifier));
                 }
 
-                if let Some(ch) = self.ch {
+                if self.ch.is_some() {
                     return TokenLiteral::new(Token::Int, Some(self.read_number()));
                 }
 
@@ -245,11 +245,6 @@ fn test_next_token() {
         TokenLiteral::new(Token::Gt, Some(">".to_owned())),
         TokenLiteral::new(Token::Int, Some("5".to_owned())),
         TokenLiteral::new(Token::Semicolon, Some(";".to_owned())),
-        // if (5 < 10) {
-        // return true;
-        // } else {
-        // return false;
-        // }
         TokenLiteral::new(Token::If, Some("if".to_owned())),
         TokenLiteral::new(Token::Lparen, Some("(".to_owned())),
         TokenLiteral::new(Token::Int, Some("5".to_owned())),

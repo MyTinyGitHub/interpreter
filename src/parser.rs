@@ -9,8 +9,8 @@ use crate::{
     token::{Precedence, Token, TokenLiteral},
 };
 
-type PrefixParserFn = fn(&mut Parser) -> Expression;
-type InfixParserFn = fn(&mut Parser, Expression) -> Expression;
+type PrefixParserFn = fn(&mut Parser) -> Option<Expression>;
+type InfixParserFn = fn(&mut Parser, Option<Expression>) -> Option<Expression>;
 
 pub struct Parser {
     lexer: Lexer,
@@ -49,6 +49,10 @@ impl Parser {
             .insert(Token::Minus, Parser::parse_prefix_expression);
 
         result.prefix_fns.insert(Token::True, Parser::parse_boolean);
+
+        result
+            .prefix_fns
+            .insert(Token::Lparen, Parser::parse_grouped);
 
         result
             .prefix_fns
@@ -92,15 +96,15 @@ impl Parser {
         result
     }
 
-    fn parse_identifier(&mut self) -> Expression {
-        Expression::Identifier(Identifier {
+    fn parse_identifier(&mut self) -> Option<Expression> {
+        Some(Expression::Identifier(Identifier {
             token: self.current_token.clone(),
             value: self.current_token.value.clone().unwrap(),
-        })
+        }))
     }
 
-    fn parse_boolean(&mut self) -> Expression {
-        Expression::Boolean(BooleanLiteral {
+    fn parse_boolean(&mut self) -> Option<Expression> {
+        Some(Expression::Boolean(BooleanLiteral {
             token: self.current_token.clone(),
             value: match self.current_token.token {
                 Token::True => true,
@@ -110,42 +114,56 @@ impl Parser {
                     self.current_token.token
                 ),
             },
-        })
+        }))
     }
 
-    fn parse_prefix_expression(&mut self) -> Expression {
+    fn parse_grouped(&mut self) -> Option<Expression> {
+        self.next_token();
+
+        let exp = self.parse_expresion(Precedence::Lowest);
+
+        if self.peek_token.token != Token::Rparen {
+            return None;
+        }
+
+        self.next_token();
+
+        exp
+    }
+
+    fn parse_prefix_expression(&mut self) -> Option<Expression> {
         let token = self.current_token.clone();
         let operator = self.current_token.value.clone().unwrap();
 
         self.next_token();
 
-        Expression::Prefix(PrefixExpression {
+        Some(Expression::Prefix(PrefixExpression {
             token,
             operator,
-            right: Box::new(self.parse_expresion(Precedence::Prefix).unwrap()),
-        })
+            right: self.parse_expresion(Precedence::Prefix).map(Box::new),
+        }))
     }
 
-    fn parse_infix_expression(&mut self, expr: Expression) -> Expression {
+    fn parse_infix_expression(&mut self, expr: Option<Expression>) -> Option<Expression> {
         let token = self.current_token.clone();
         let operator = self.current_token.value.clone().unwrap();
         let precedence = self.current_token.precedence();
 
         self.next_token();
 
-        Expression::Infix(InfixExpression {
+        Some(Expression::Infix(InfixExpression {
             token,
             operator,
-            right: Box::new(self.parse_expresion(precedence).unwrap()),
-            left: Box::new(expr),
-        })
+            right: self.parse_expresion(precedence).map(Box::new),
+            left: expr.map(Box::new),
+        }))
     }
 
-    fn parse_integer_literal(&mut self) -> Expression {
-        Expression::IntegerLiteral(IntegerLiteral {
+    fn parse_integer_literal(&mut self) -> Option<Expression> {
+        Some(Expression::IntegerLiteral(IntegerLiteral {
             token: self.current_token.clone(),
             value: self.current_token.value.clone().unwrap().parse().unwrap(),
-        })
+        }))
     }
 
     pub fn errors(&self) -> &[String] {
@@ -185,7 +203,9 @@ impl Parser {
             value: None,
         };
 
-        statement.value = self.parse_expresion(self.current_token.precedence());
+        statement.value = self
+            .parse_expresion(self.current_token.precedence())
+            .map(Box::new);
 
         if self.peek_token.token == Token::Semicolon {
             self.next_token();
@@ -209,8 +229,9 @@ impl Parser {
             && precedenece < self.peek_token.precedence()
         {
             let peek_token = self.peek_token.token.clone();
+
             if !self.infix_fns.contains_key(&peek_token) {
-                return Some(left_expr);
+                return left_expr;
             }
 
             let infix = self.infix_fns[&peek_token];
@@ -220,7 +241,7 @@ impl Parser {
             left_expr = infix(self, left_expr);
         }
 
-        Some(left_expr)
+        left_expr
     }
 
     fn expect_peek(&mut self, token: Token) -> bool {
@@ -324,7 +345,7 @@ mod test {
         let statement = &program.statements[0];
 
         match statement {
-            Statement::Expression(s) => match s.value.as_ref().unwrap() {
+            Statement::Expression(s) => match s.value.as_deref().unwrap() {
                 Expression::Identifier(expr) => assert_eq!(expr.value, "foobar"),
                 _ => panic!(),
             },
@@ -347,9 +368,7 @@ mod test {
         let statement = &program.statements[0];
 
         match statement {
-            Statement::Expression(s) => {
-                test_integer_literal_expression(s.value.as_ref().unwrap(), 5)
-            }
+            Statement::Expression(s) => test_integer_literal_expression(s.value.as_deref(), 5),
             _ => panic!(),
         }
     }
@@ -379,8 +398,8 @@ mod test {
         }
     }
 
-    fn test_integer_literal_expression(expression: &Expression, value: i64) {
-        match expression {
+    fn test_integer_literal_expression(expression: Option<&Expression>, value: i64) {
+        match expression.as_ref().unwrap() {
             Expression::IntegerLiteral(expr) => assert_eq!(expr.value, value),
             _ => panic!(),
         }
@@ -427,10 +446,10 @@ mod test {
             let statement = &program.statements[0];
 
             match statement {
-                Statement::Expression(s) => match s.value.as_ref().unwrap() {
+                Statement::Expression(s) => match s.value.as_deref().unwrap() {
                     Expression::Prefix(expr) => {
                         assert_eq!(expr.operator, expected_prefix);
-                        test_integer_literal_expression(&expr.right, expected_value);
+                        test_integer_literal_expression(expr.right.as_deref(), expected_value);
                     }
                     _ => panic!(),
                 },
@@ -466,11 +485,11 @@ mod test {
             let statement = &program.statements[0];
 
             match statement {
-                Statement::Expression(s) => match s.value.as_ref().unwrap() {
+                Statement::Expression(s) => match s.value.as_deref().unwrap() {
                     Expression::Infix(expr) => {
-                        test_integer_literal_expression(&expr.left, left);
+                        test_integer_literal_expression(expr.left.as_deref(), left);
                         assert_eq!(expr.operator, operator);
-                        test_integer_literal_expression(&expr.right, right);
+                        test_integer_literal_expression(expr.right.as_deref(), right);
                     }
                     _ => panic!(),
                 },
@@ -494,6 +513,13 @@ mod test {
             "5 > 4 == 3 < 4",
             "5 < 4 != 3 > 4",
             "3 + 4 * 5 == 3 * 1 + 4 * 5",
+            "3 < 5 == true",
+            "3 > 5 == false",
+            "1 + (2 + 3) + 4",
+            "(5 + 5) * 2",
+            "2 / (5 + 5)",
+            "-(5 + 5)",
+            "!(true == true)",
         ];
 
         let expected = [
@@ -509,6 +535,13 @@ mod test {
             "((5 > 4) == (3 < 4))",
             "((5 < 4) != (3 > 4))",
             "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+            "((3 < 5) == true)",
+            "((3 > 5) == false)",
+            "((1 + (2 + 3)) + 4)",
+            "((5 + 5) * 2)",
+            "(2 / (5 + 5))",
+            "(-(5 + 5))",
+            "(!(true == true))",
         ];
 
         for (input, expected) in inputs.iter().zip(expected) {
@@ -517,8 +550,6 @@ mod test {
 
             let program = parser.parse_program();
             check_errors(&parser);
-
-            print!("Testing");
 
             assert_eq!(program.string(), expected);
         }
