@@ -2,8 +2,9 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        BooleanLiteral, Expression, ExpressionStatement, Identifier, InfixExpression,
-        IntegerLiteral, LetStatement, PrefixExpression, Program, ReturnStatement, Statement,
+        BlockStatement, BooleanLiteral, Expression, ExpressionStatement, Identifier, IfExpression,
+        InfixExpression, IntegerLiteral, LetStatement, PrefixExpression, Program, ReturnStatement,
+        Statement,
     },
     lexer::Lexer,
     token::{Precedence, Token, TokenLiteral},
@@ -58,6 +59,8 @@ impl Parser {
             .prefix_fns
             .insert(Token::False, Parser::parse_boolean);
 
+        result.prefix_fns.insert(Token::If, Parser::parse_if);
+
         result
             .infix_fns
             .insert(Token::Plus, Parser::parse_infix_expression);
@@ -94,6 +97,68 @@ impl Parser {
         result.next_token();
 
         result
+    }
+
+    fn parse_if(&mut self) -> Option<Expression> {
+        let token = self.current_token.clone();
+
+        if self.peek_token.token != Token::Lparen {
+            return None;
+        }
+
+        self.next_token();
+        self.next_token();
+
+        let condition = self.parse_expresion(Precedence::Lowest);
+
+        if self.peek_token.token != Token::Rparen {
+            return None;
+        }
+
+        self.next_token();
+
+        if self.peek_token.token != Token::Lbrace {
+            return None;
+        }
+
+        self.next_token();
+
+        let consequence = self.parse_block_statement();
+
+        let alternative = if self.peek_token.token == Token::Else {
+            self.next_token();
+            if self.peek_token.token != Token::Lbrace {
+                return None;
+            }
+            self.next_token();
+            Some(self.parse_block_statement())
+        } else {
+            None
+        };
+
+        Some(Expression::If(IfExpression {
+            token,
+            condition: condition.map(Box::new),
+            consequence: Some(consequence),
+            alternative,
+        }))
+    }
+
+    fn parse_block_statement(&mut self) -> BlockStatement {
+        let mut block = BlockStatement {
+            token: self.current_token.clone(),
+            statements: Vec::new(),
+        };
+
+        self.next_token();
+
+        while self.current_token.token != Token::Rbrace && self.current_token.token != Token::Eof {
+            let stmt = self.parse_statement();
+            block.statements.push(stmt);
+            self.next_token();
+        }
+
+        block
     }
 
     fn parse_identifier(&mut self) -> Option<Expression> {
@@ -300,6 +365,7 @@ impl Parser {
 #[cfg(test)]
 mod test {
     use core::panic;
+    use std::path::Prefix;
 
     use crate::{
         ast::{Expression, Statement},
@@ -345,10 +411,9 @@ mod test {
         let statement = &program.statements[0];
 
         match statement {
-            Statement::Expression(s) => match s.value.as_deref().unwrap() {
-                Expression::Identifier(expr) => assert_eq!(expr.value, "foobar"),
-                _ => panic!(),
-            },
+            Statement::Expression(s) => {
+                test_expression(s.value.as_deref(), TestValue::String("foobar".to_string()));
+            }
             _ => panic!(),
         }
     }
@@ -368,7 +433,9 @@ mod test {
         let statement = &program.statements[0];
 
         match statement {
-            Statement::Expression(s) => test_integer_literal_expression(s.value.as_deref(), 5),
+            Statement::Expression(s) => {
+                test_expression(s.value.as_deref(), TestValue::String(5.to_string()))
+            }
             _ => panic!(),
         }
     }
@@ -391,24 +458,53 @@ mod test {
 
             match statement {
                 Statement::Expression(s) => {
-                    test_boolean_literal_expression(s.value.as_ref().unwrap(), result)
+                    test_expression(s.value.as_deref(), TestValue::String(result.to_string()))
                 }
                 _ => panic!(),
             }
         }
     }
 
-    fn test_integer_literal_expression(expression: Option<&Expression>, value: i64) {
-        match expression.as_ref().unwrap() {
-            Expression::IntegerLiteral(expr) => assert_eq!(expr.value, value),
-            _ => panic!(),
-        }
+    struct InfixTestValue {
+        left: Box<TestValue>,
+        operator: String,
+        right: Box<TestValue>,
     }
 
-    fn test_boolean_literal_expression(expression: &Expression, value: bool) {
-        match expression {
-            Expression::Boolean(expr) => assert_eq!(expr.value, value),
-            _ => panic!(),
+    struct PrefixTestValue {
+        operator: String,
+        right: Box<TestValue>,
+    }
+
+    enum TestValue {
+        String(String),
+        Infix(InfixTestValue),
+        Prefix(PrefixTestValue),
+    }
+
+    fn test_expression(expression: Option<&Expression>, value: TestValue) {
+        match value {
+            TestValue::String(val) => match expression.as_ref().unwrap() {
+                Expression::IntegerLiteral(expr) => assert_eq!(expr.value.to_string(), val),
+                Expression::Identifier(expr) => assert_eq!(expr.value.to_string(), val),
+                Expression::Boolean(expr) => assert_eq!(expr.value.to_string(), val),
+                _ => panic!(),
+            },
+            TestValue::Infix(value) => match expression.as_ref().unwrap() {
+                Expression::Infix(expr) => {
+                    test_expression(expr.left.as_deref(), *value.left);
+                    assert_eq!(expr.operator, value.operator);
+                    test_expression(expr.right.as_deref(), *value.right);
+                }
+                _ => panic!(),
+            },
+            TestValue::Prefix(value) => match expression.as_ref().unwrap() {
+                Expression::Prefix(expr) => {
+                    assert_eq!(expr.operator, value.operator);
+                    test_expression(expr.right.as_deref(), *value.right);
+                }
+                _ => panic!(),
+            },
         }
     }
 
@@ -446,13 +542,15 @@ mod test {
             let statement = &program.statements[0];
 
             match statement {
-                Statement::Expression(s) => match s.value.as_deref().unwrap() {
-                    Expression::Prefix(expr) => {
-                        assert_eq!(expr.operator, expected_prefix);
-                        test_integer_literal_expression(expr.right.as_deref(), expected_value);
-                    }
-                    _ => panic!(),
-                },
+                Statement::Expression(s) => {
+                    test_expression(
+                        s.value.as_deref(),
+                        TestValue::Prefix(PrefixTestValue {
+                            operator: expected_prefix.to_string(),
+                            right: Box::new(TestValue::String(expected_value.to_string())),
+                        }),
+                    );
+                }
                 _ => panic!(),
             }
         }
@@ -485,16 +583,63 @@ mod test {
             let statement = &program.statements[0];
 
             match statement {
-                Statement::Expression(s) => match s.value.as_deref().unwrap() {
-                    Expression::Infix(expr) => {
-                        test_integer_literal_expression(expr.left.as_deref(), left);
-                        assert_eq!(expr.operator, operator);
-                        test_integer_literal_expression(expr.right.as_deref(), right);
-                    }
-                    _ => panic!(),
-                },
+                Statement::Expression(s) => {
+                    test_expression(
+                        s.value.as_deref(),
+                        TestValue::Infix(InfixTestValue {
+                            operator: operator.to_string(),
+                            left: Box::new(TestValue::String(left.to_string())),
+                            right: Box::new(TestValue::String(right.to_string())),
+                        }),
+                    );
+                }
                 _ => panic!(),
             }
+        }
+    }
+
+    #[test]
+    fn test_if_else_condition() {
+        let input = "if (a == b) { y } else { x }";
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        check_errors(&parser);
+
+        assert_eq!(program.statements.len(), 1);
+        match &program.statements[0] {
+            Statement::Expression(stmt) => match stmt.value.as_deref().unwrap() {
+                Expression::If(expr) => {
+                    test_expression(
+                        expr.condition.as_deref(),
+                        TestValue::Infix(InfixTestValue {
+                            operator: "==".to_string(),
+                            left: Box::new(TestValue::String("a".to_string())),
+                            right: Box::new(TestValue::String("b".to_string())),
+                        }),
+                    );
+                    let statement = &expr.consequence.as_ref().unwrap().statements[0];
+
+                    match statement {
+                        Statement::Expression(s) => {
+                            test_expression(s.value.as_deref(), TestValue::String("y".to_string()));
+                        }
+                        _ => panic!(),
+                    }
+
+                    let statement = &expr.alternative.as_ref().unwrap().statements[0];
+
+                    match statement {
+                        Statement::Expression(s) => {
+                            test_expression(s.value.as_deref(), TestValue::String("x".to_string()));
+                        }
+                        _ => panic!(),
+                    }
+                }
+                _ => panic!(),
+            },
+            _ => panic!(),
         }
     }
 

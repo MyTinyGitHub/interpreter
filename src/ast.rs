@@ -4,6 +4,7 @@ use crate::token::TokenLiteral;
 pub enum Statement {
     Let(LetStatement),
     Return(ReturnStatement),
+    Block(BlockStatement),
     Expression(ExpressionStatement),
 }
 
@@ -14,6 +15,7 @@ pub enum Expression {
     Boolean(BooleanLiteral),
     Prefix(PrefixExpression),
     Infix(InfixExpression),
+    If(IfExpression),
 }
 
 #[derive(Default)]
@@ -53,6 +55,12 @@ pub struct ReturnStatement {
 }
 
 #[derive(Debug)]
+pub struct BlockStatement {
+    pub token: TokenLiteral,
+    pub statements: Vec<Statement>,
+}
+
+#[derive(Debug)]
 pub struct PrefixExpression {
     pub token: TokenLiteral,
     pub operator: String,
@@ -71,6 +79,14 @@ pub struct InfixExpression {
 pub struct ExpressionStatement {
     pub token: TokenLiteral,
     pub value: Option<Box<Expression>>,
+}
+
+#[derive(Debug)]
+pub struct IfExpression {
+    pub token: TokenLiteral,
+    pub condition: Option<Box<Expression>>,
+    pub consequence: Option<BlockStatement>,
+    pub alternative: Option<BlockStatement>,
 }
 
 impl Program {
@@ -99,6 +115,7 @@ impl Expression {
             Self::Prefix(expr) => expr.expression_node(),
             Self::Infix(expr) => expr.expression_node(),
             Self::Boolean(expr) => expr.expression_node(),
+            Self::If(expr) => expr.expression_node(),
         }
     }
 
@@ -109,6 +126,7 @@ impl Expression {
             Self::Prefix(expr) => expr.string(),
             Self::Infix(expr) => expr.string(),
             Self::Boolean(expr) => expr.string(),
+            Self::If(expr) => expr.string(),
         }
     }
 
@@ -119,6 +137,7 @@ impl Expression {
             Self::Prefix(expr) => expr.token_literal(),
             Self::Infix(expr) => expr.token_literal(),
             Self::Boolean(expr) => expr.token_literal(),
+            Self::If(expr) => expr.token_literal(),
         }
     }
 }
@@ -128,6 +147,7 @@ impl Statement {
         match self {
             Self::Let(stmt) => stmt.token_literal(),
             Self::Return(stmt) => stmt.token_literal(),
+            Self::Block(stmt) => stmt.token_literal(),
             Self::Expression(stmt) => stmt.token_literal(),
         }
     }
@@ -136,6 +156,7 @@ impl Statement {
         match self {
             Self::Let(stmt) => stmt.string(),
             Self::Return(stmt) => stmt.string(),
+            Self::Block(stmt) => stmt.string(),
             Self::Expression(stmt) => stmt.string(),
         }
     }
@@ -203,6 +224,31 @@ impl ReturnStatement {
             "{} {};",
             self.token_literal(),
             self.value.as_ref().map_or(String::new(), |v| v.string())
+        )
+    }
+}
+
+impl BlockStatement {
+    pub fn new(token: &TokenLiteral, statements: Vec<Statement>) -> Self {
+        Self {
+            token: token.to_owned(),
+            statements,
+        }
+    }
+
+    fn token_literal(&self) -> String {
+        self.token.value.clone().unwrap().to_string()
+    }
+
+    fn string(&self) -> String {
+        format!(
+            "{} {};",
+            self.token_literal(),
+            self.statements
+                .iter()
+                .map(|v| v.string())
+                .collect::<Vec<String>>()
+                .join("")
         )
     }
 }
@@ -282,6 +328,28 @@ impl InfixExpression {
     fn expression_node(&self) {}
 }
 
+impl IfExpression {
+    fn token_literal(&self) -> String {
+        self.token.value.clone().unwrap()
+    }
+
+    fn string(&self) -> String {
+        format!(
+            "if {} {} {}",
+            self.condition
+                .as_ref()
+                .map_or(String::new(), |v| v.string()),
+            self.consequence
+                .as_ref()
+                .map_or(String::new(), |v| v.string()),
+            self.alternative
+                .as_ref()
+                .map_or(String::new(), |v| format!("else {}", v.string()))
+        )
+    }
+
+    fn expression_node(&self) {}
+}
 #[cfg(test)]
 mod test {
     use crate::{
