@@ -16,6 +16,7 @@ pub enum Expression {
     Prefix(PrefixExpression),
     Infix(InfixExpression),
     If(IfExpression),
+    Function(FunctionLiteral),
 }
 
 #[derive(Default)]
@@ -39,6 +40,13 @@ pub struct IntegerLiteral {
 pub struct BooleanLiteral {
     pub token: TokenLiteral,
     pub value: bool,
+}
+
+#[derive(Debug)]
+pub struct FunctionLiteral {
+    pub token: TokenLiteral,
+    pub parameters: Vec<Identifier>,
+    pub body: Option<BlockStatement>,
 }
 
 #[derive(Debug)]
@@ -116,6 +124,7 @@ impl Expression {
             Self::Infix(expr) => expr.expression_node(),
             Self::Boolean(expr) => expr.expression_node(),
             Self::If(expr) => expr.expression_node(),
+            Self::Function(expr) => expr.expression_node(),
         }
     }
 
@@ -127,6 +136,7 @@ impl Expression {
             Self::Infix(expr) => expr.string(),
             Self::Boolean(expr) => expr.string(),
             Self::If(expr) => expr.string(),
+            Self::Function(expr) => expr.string(),
         }
     }
 
@@ -138,6 +148,7 @@ impl Expression {
             Self::Infix(expr) => expr.token_literal(),
             Self::Boolean(expr) => expr.token_literal(),
             Self::If(expr) => expr.token_literal(),
+            Self::Function(expr) => expr.token_literal(),
         }
     }
 }
@@ -350,6 +361,28 @@ impl IfExpression {
 
     fn expression_node(&self) {}
 }
+
+impl FunctionLiteral {
+    fn token_literal(&self) -> String {
+        self.token.value.clone().unwrap()
+    }
+
+    fn string(&self) -> String {
+        format!(
+            "{}({}){}",
+            self.token_literal(),
+            self.parameters
+                .iter()
+                .map(|v| v.string())
+                .collect::<Vec<String>>()
+                .join(", "),
+            self.body.as_ref().map_or(String::new(), |v| v.string())
+        )
+    }
+
+    fn expression_node(&self) {}
+}
+
 #[cfg(test)]
 mod test {
     use crate::{
