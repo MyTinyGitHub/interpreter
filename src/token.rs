@@ -69,6 +69,7 @@ impl TokenLiteral {
             Token::Lt | Token::Gt => Precedence::Lessgreater,
             Token::Plus | Token::Minus => Precedence::Sum,
             Token::Asterisk | Token::Slash => Precedence::Product,
+            Token::Lparen => Precedence::Call,
             _ => Precedence::Lowest,
         }
     }

@@ -17,6 +17,7 @@ pub enum Expression {
     Infix(InfixExpression),
     If(IfExpression),
     Function(FunctionLiteral),
+    Call(CallExpresion),
 }
 
 #[derive(Default)]
@@ -97,6 +98,13 @@ pub struct IfExpression {
     pub alternative: Option<BlockStatement>,
 }
 
+#[derive(Debug)]
+pub struct CallExpresion {
+    pub token: TokenLiteral,
+    pub function: Option<Box<Expression>>,
+    pub arguments: Vec<Expression>,
+}
+
 impl Program {
     fn token_literal(&self) -> String {
         if self.statements.is_empty() {
@@ -125,6 +133,7 @@ impl Expression {
             Self::Boolean(expr) => expr.expression_node(),
             Self::If(expr) => expr.expression_node(),
             Self::Function(expr) => expr.expression_node(),
+            Self::Call(expr) => expr.expression_node(),
         }
     }
 
@@ -137,6 +146,7 @@ impl Expression {
             Self::Boolean(expr) => expr.string(),
             Self::If(expr) => expr.string(),
             Self::Function(expr) => expr.string(),
+            Self::Call(expr) => expr.string(),
         }
     }
 
@@ -149,6 +159,7 @@ impl Expression {
             Self::Boolean(expr) => expr.token_literal(),
             Self::If(expr) => expr.token_literal(),
             Self::Function(expr) => expr.token_literal(),
+            Self::Call(expr) => expr.token_literal(),
         }
     }
 }
@@ -377,6 +388,26 @@ impl FunctionLiteral {
                 .collect::<Vec<String>>()
                 .join(", "),
             self.body.as_ref().map_or(String::new(), |v| v.string())
+        )
+    }
+
+    fn expression_node(&self) {}
+}
+
+impl CallExpresion {
+    fn token_literal(&self) -> String {
+        self.token.value.clone().unwrap()
+    }
+
+    fn string(&self) -> String {
+        format!(
+            "{}({})",
+            self.function.as_ref().unwrap().string(),
+            self.arguments
+                .iter()
+                .map(|v| v.string())
+                .collect::<Vec<String>>()
+                .join(", ")
         )
     }
 

@@ -1,10 +1,10 @@
-use std::{collections::HashMap, os::linux::raw::stat};
+use std::collections::HashMap;
 
 use crate::{
     ast::{
-        BlockStatement, BooleanLiteral, Expression, ExpressionStatement, FunctionLiteral,
-        Identifier, IfExpression, InfixExpression, IntegerLiteral, LetStatement, PrefixExpression,
-        Program, ReturnStatement, Statement,
+        BlockStatement, BooleanLiteral, CallExpresion, Expression, ExpressionStatement,
+        FunctionLiteral, Identifier, IfExpression, InfixExpression, IntegerLiteral, LetStatement,
+        PrefixExpression, Program, ReturnStatement, Statement,
     },
     lexer::Lexer,
     token::{Precedence, Token, TokenLiteral},
@@ -84,10 +84,53 @@ impl Parser {
 
         result.infix_fns.insert(Token::Gt, Parser::parse_infix);
 
+        result.infix_fns.insert(Token::Lparen, Parser::parse_call);
+
         result.next_token();
         result.next_token();
 
         result
+    }
+
+    fn parse_call(&mut self, function: Option<Expression>) -> Option<Expression> {
+        Some(Expression::Call(CallExpresion {
+            token: self.current_token.clone(),
+            function: function.map(Box::new),
+            arguments: self.parse_call_arguments(),
+        }))
+    }
+
+    fn parse_call_arguments(&mut self) -> Vec<Expression> {
+        let mut arguments: Vec<Expression> = vec![];
+
+        if self.peek_token.token == Token::Rparen {
+            self.next_token();
+            return arguments;
+        }
+
+        self.next_token();
+
+        arguments.push(
+            self.parse_expresion(Precedence::Lowest)
+                .expect("Unable to parse the expresion"),
+        );
+
+        while self.peek_token.token == Token::Comma {
+            self.next_token();
+            self.next_token();
+            arguments.push(
+                self.parse_expresion(Precedence::Lowest)
+                    .expect("Unable to parse the expresion"),
+            );
+        }
+
+        if self.peek_token.token != Token::Rparen {
+            return vec![];
+        }
+
+        self.next_token();
+
+        arguments
     }
 
     fn parse_if(&mut self) -> Option<Expression> {
@@ -610,6 +653,57 @@ mod test {
     }
 
     #[test]
+    fn test_call_expresion() {
+        let input = "add(1, 2 * 3, 4 + 5)";
+
+        let lexer = Lexer::new(input);
+        let mut parser = Parser::new(lexer);
+
+        let program = parser.parse_program();
+        check_errors(&parser);
+
+        let statement = &program.statements[0];
+
+        match statement {
+            Statement::Expression(expr) => match expr.value.as_deref().unwrap() {
+                Expression::Call(call) => {
+                    test_expression(
+                        call.function.as_deref(),
+                        TestValue::String("add".to_string()),
+                    );
+
+                    assert_eq!(call.arguments.len(), 3);
+
+                    let argument = &call.arguments[0];
+                    test_expression(Some(argument), TestValue::String("1".to_string()));
+
+                    let argument = &call.arguments[1];
+                    test_expression(
+                        Some(argument),
+                        TestValue::Infix(InfixTestValue {
+                            left: Box::new(TestValue::String("2".to_string())),
+                            operator: "*".to_string(),
+                            right: Box::new(TestValue::String("3".to_string())),
+                        }),
+                    );
+
+                    let argument = &call.arguments[2];
+                    test_expression(
+                        Some(argument),
+                        TestValue::Infix(InfixTestValue {
+                            left: Box::new(TestValue::String("4".to_string())),
+                            operator: "+".to_string(),
+                            right: Box::new(TestValue::String("5".to_string())),
+                        }),
+                    );
+                }
+                _ => panic!(),
+            },
+            _ => panic!(),
+        }
+    }
+
+    #[test]
     fn test_function() {
         let input = "fn(a,b,c) { a }";
         let exp_params = vec!["a", "b", "c"];
@@ -783,6 +877,9 @@ mod test {
             "2 / (5 + 5)",
             "-(5 + 5)",
             "!(true == true)",
+            "a + add(b * c) + d",
+            "add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+            "add(a + b + c * d / f + g)",
         ];
 
         let expected = [
@@ -805,6 +902,9 @@ mod test {
             "(2 / (5 + 5))",
             "(-(5 + 5))",
             "(!(true == true))",
+            "((a + add((b * c))) + d)",
+            "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))",
+            "add((((a + b) + ((c * d) / f)) + g))",
         ];
 
         for (input, expected) in inputs.iter().zip(expected) {
@@ -812,6 +912,7 @@ mod test {
             let mut parser = Parser::new(lexer);
 
             let program = parser.parse_program();
+            println!("Testing {}, {}", input, expected);
             check_errors(&parser);
 
             assert_eq!(program.string(), expected);
