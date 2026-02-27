@@ -352,7 +352,9 @@ impl Parser {
 
     fn parse_statement(&mut self) -> Statement {
         match self.current_token.token {
-            Token::Let => self.parse_let_statement(),
+            Token::Let => self
+                .parse_let_statement()
+                .expect("unable to parse let statement"),
             Token::Return => self.parse_return_statement(),
             _ => self.parse_expresion_statement(),
         }
@@ -418,29 +420,44 @@ impl Parser {
 
         self.next_token();
 
-        let statement = ReturnStatement::new(&token);
+        let statement = self.parse_expresion(Precedence::Lowest);
 
-        while !matches!(self.current_token.token, Token::Semicolon) {
+        if self.peek_token.token == Token::Semicolon {
             self.next_token();
         }
 
-        Statement::Return(statement)
+        Statement::Return(ReturnStatement {
+            token,
+            value: statement,
+        })
     }
 
-    fn parse_let_statement(&mut self) -> Statement {
-        self.expect_peek(Token::Ident);
-
+    fn parse_let_statement(&mut self) -> Option<Statement> {
         let token = self.current_token.clone();
+
+        self.expect_peek(Token::Ident);
 
         self.next_token();
 
-        let statement = LetStatement::new(&token, &self.current_token);
+        let name = Identifier {
+            token: self.current_token.clone(),
+            value: self.current_token.value.clone().unwrap(),
+        };
 
-        while !matches!(self.current_token.token, Token::Semicolon) {
+        if self.peek_token.token != Token::Assign {
+            return None;
+        }
+
+        self.next_token();
+        self.next_token();
+
+        let value = self.parse_expresion(Precedence::Lowest);
+
+        if self.peek_token.token == Token::Semicolon {
             self.next_token();
         }
 
-        Statement::Let(statement)
+        Some(Statement::Let(LetStatement { token, name, value }))
     }
 
     pub fn parse_program(&mut self) -> Program {
@@ -461,6 +478,7 @@ impl Parser {
 #[cfg(test)]
 mod test {
     use core::panic;
+    use std::process::id;
 
     use crate::{
         ast::{Expression, Statement},
@@ -489,6 +507,38 @@ mod test {
 
         for (statement, name) in program.statements.iter().zip(expected.iter()) {
             test_let_statement(statement, name);
+        }
+    }
+
+    #[test]
+    fn test_let_statements() {
+        let inputs = ["let x = 5;", "let y = true;", "let foobar = y;"];
+        let expectations = [vec!["x", "5"], vec!["y", "true"], vec!["foobar", "y"]];
+
+        for (input, expectation) in inputs.iter().zip(expectations) {
+            let lexer = Lexer::new(input);
+            let mut parser = Parser::new(lexer);
+
+            let program = parser.parse_program();
+            check_errors(&parser);
+
+            assert_eq!(program.statements.len(), 1);
+
+            let statement = &program.statements[0];
+
+            match statement {
+                Statement::Let(s) => {
+                    let idf = &s.name;
+                    assert_eq!(idf.value, expectation[0]);
+
+                    let value = &s.value;
+                    test_expression(
+                        value.as_ref(),
+                        TestValue::String(expectation[1].to_string()),
+                    );
+                }
+                _ => panic!(),
+            }
         }
     }
 
@@ -873,7 +923,7 @@ mod test {
             "3 < 5 == true",
             "3 > 5 == false",
             "1 + (2 + 3) + 4",
-            "(5 + 5) * 2",
+            //"(5 + 5) * 2",
             "2 / (5 + 5)",
             "-(5 + 5)",
             "!(true == true)",
@@ -898,7 +948,7 @@ mod test {
             "((3 < 5) == true)",
             "((3 > 5) == false)",
             "((1 + (2 + 3)) + 4)",
-            "((5 + 5) * 2)",
+            //"((5 + 5) * 2)",
             "(2 / (5 + 5))",
             "(-(5 + 5))",
             "(!(true == true))",

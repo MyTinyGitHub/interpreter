@@ -19,9 +19,10 @@ pub fn repl_loop() {
         let mut parser = Parser::new(token_processor);
         let program = parser.parse_program();
 
-        println!("{:?}", program.string());
-        for statement in program.statements {
-            println!("{:?}", statement);
+        for error in parser.errors() {
+            println!("{:?}", error);
         }
+
+        println!("{:?}\n", program.string());
     }
 }
