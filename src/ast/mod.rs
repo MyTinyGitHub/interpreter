@@ -1,9 +1,15 @@
 use crate::token::TokenLiteral;
 
 #[cfg(test)]
-pub mod test {}
+pub mod tests;
 
 #[derive(Debug)]
+pub enum Node {
+    Statement(Statement),
+    Program(Program),
+}
+
+#[derive(Debug, Clone)]
 pub enum Statement {
     Let(LetStatement),
     Return(ReturnStatement),
@@ -11,7 +17,7 @@ pub enum Statement {
     Expression(ExpressionStatement),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expression {
     Identifier(Identifier),
     IntegerLiteral(IntegerLiteral),
@@ -23,63 +29,63 @@ pub enum Expression {
     Call(CallExpresion),
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Program {
     pub statements: Vec<Statement>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Identifier {
     pub token: TokenLiteral,
     pub value: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IntegerLiteral {
     pub token: TokenLiteral,
     pub value: i64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BooleanLiteral {
     pub token: TokenLiteral,
     pub value: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FunctionLiteral {
     pub token: TokenLiteral,
     pub parameters: Vec<Identifier>,
     pub body: Option<BlockStatement>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LetStatement {
     pub token: TokenLiteral,
     pub name: Identifier,
     pub value: Option<Expression>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ReturnStatement {
     pub token: TokenLiteral,
     pub value: Option<Expression>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BlockStatement {
     pub token: TokenLiteral,
     pub statements: Vec<Statement>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PrefixExpression {
     pub token: TokenLiteral,
     pub operator: String,
     pub right: Option<Box<Expression>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InfixExpression {
     pub token: TokenLiteral,
     pub operator: String,
@@ -87,13 +93,13 @@ pub struct InfixExpression {
     pub left: Option<Box<Expression>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ExpressionStatement {
     pub token: TokenLiteral,
     pub value: Option<Box<Expression>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IfExpression {
     pub token: TokenLiteral,
     pub condition: Option<Box<Expression>>,
@@ -101,7 +107,7 @@ pub struct IfExpression {
     pub alternative: Option<BlockStatement>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CallExpresion {
     pub token: TokenLiteral,
     pub function: Option<Box<Expression>>,
@@ -123,6 +129,15 @@ impl Program {
             .map(|s| s.string())
             .collect::<Vec<_>>()
             .join("")
+    }
+}
+
+impl Node {
+    fn token_literal(&self) -> String {
+        match self {
+            Self::Statement(node) => node.token_literal(),
+            Self::Program(node) => node.token_literal(),
+        }
     }
 }
 
