@@ -35,6 +35,7 @@ pub fn eval(node: &Node) -> Option<Object> {
         Node::Statement(stmt) => match stmt {
             Statement::Expression(expr) => match expr.value.as_deref().expect("") {
                 Expression::IntegerLiteral(integer) => return Some(Object::Integer(integer.value)),
+                Expression::Boolean(boolean) => return Some(Object::Boolean(boolean.value)),
                 _ => None,
             },
             _ => None,
@@ -52,3 +53,4 @@ pub fn eval_statements(statements: &Vec<Statement>) -> Option<Object> {
 
     result
 }
+
