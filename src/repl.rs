@@ -1,6 +1,6 @@
 use std::io;
 
-use crate::{lexer::Lexer, parser::Parser};
+use crate::{ast::Node, evaluator::eval, lexer::Lexer, parser::Parser};
 
 pub fn repl_loop() {
     loop {
@@ -19,10 +19,16 @@ pub fn repl_loop() {
         let mut parser = Parser::new(token_processor);
         let program = parser.parse_program();
 
-        for error in parser.errors() {
-            println!("{:?}", error);
+        if !parser.errors().is_empty() {
+            for error in parser.errors() {
+                println!("{:?}", error);
+            }
+            continue;
         }
 
-        println!("{:?}\n", program.string());
+        let obj = eval(&Node::Program(program));
+        if let Some(object) = obj {
+            println!("{}\n", object.inspect())
+        }
     }
 }
