@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use crate::{
     ast::{
-        BlockStatement, BooleanLiteral, CallExpresion, Expression, ExpressionStatement,
-        FunctionLiteral, Identifier, IfExpression, InfixExpression, IntegerLiteral, LetStatement,
-        PrefixExpression, Program, ReturnStatement, Statement,
+        BlockStatement, BooleanLiteral, CallExpresion, Expression, FunctionLiteral, Identifier,
+        IfExpression, InfixExpression, IntegerLiteral, LetStatement, PrefixExpression, Program,
+        ReturnStatement, Statement,
     },
     lexer::Lexer,
     token::{Precedence, Token, TokenLiteral},
@@ -14,7 +14,7 @@ use crate::{
 mod tests;
 
 type PrefixParserFn = fn(&mut Parser) -> Option<Expression>;
-type InfixParserFn = fn(&mut Parser, Option<Expression>) -> Option<Expression>;
+type InfixParserFn = fn(&mut Parser, Expression) -> Option<Expression>;
 
 pub struct Parser {
     lexer: Lexer,
@@ -95,10 +95,10 @@ impl Parser {
         result
     }
 
-    fn parse_call(&mut self, function: Option<Expression>) -> Option<Expression> {
+    fn parse_call(&mut self, function: Expression) -> Option<Expression> {
         Some(Expression::Call(CallExpresion {
             token: self.current_token.clone(),
-            function: function.map(Box::new),
+            function: Box::new(function),
             arguments: self.parse_call_arguments(),
         }))
     }
@@ -146,7 +146,7 @@ impl Parser {
         self.next_token();
         self.next_token();
 
-        let condition = self.parse_expresion(Precedence::Lowest);
+        let condition = self.parse_expresion(Precedence::Lowest).expect("tmp");
 
         if !self.expect_peek(Token::Rparen) {
             return None;
@@ -175,7 +175,7 @@ impl Parser {
 
         Some(Expression::If(IfExpression {
             token,
-            condition: condition.map(Box::new),
+            condition: Box::new(condition),
             consequence: Some(consequence),
             alternative,
         }))
@@ -304,11 +304,14 @@ impl Parser {
         Some(Expression::Prefix(PrefixExpression {
             token,
             operator,
-            right: self.parse_expresion(Precedence::Prefix).map(Box::new),
+            right: self
+                .parse_expresion(Precedence::Prefix)
+                .map(Box::new)
+                .expect("tmp"),
         }))
     }
 
-    fn parse_infix(&mut self, expr: Option<Expression>) -> Option<Expression> {
+    fn parse_infix(&mut self, expr: Expression) -> Option<Expression> {
         let token = self.current_token.clone();
         let operator = self.current_token.value.clone().unwrap();
         let precedence = self.current_token.precedence();
@@ -318,8 +321,8 @@ impl Parser {
         Some(Expression::Infix(InfixExpression {
             token,
             operator,
-            right: self.parse_expresion(precedence).map(Box::new),
-            left: expr.map(Box::new),
+            right: self.parse_expresion(precedence).map(Box::new).expect("tmp"),
+            left: Box::new(expr),
         }))
     }
 
@@ -364,18 +367,13 @@ impl Parser {
     }
 
     fn parse_expresion_statement(&mut self) -> Statement {
-        let mut statement = ExpressionStatement {
-            token: self.current_token.clone(),
-            value: None,
-        };
-
-        statement.value = self.parse_expresion(Precedence::Lowest).map(Box::new);
+        let value = self.parse_expresion(Precedence::Lowest);
 
         if self.peek_token.token == Token::Semicolon {
             self.next_token();
         }
 
-        Statement::Expression(statement)
+        Statement::Expression(value.expect("Expected value"))
     }
 
     fn parse_expresion(&mut self, precedenece: Precedence) -> Option<Expression> {
@@ -402,7 +400,7 @@ impl Parser {
 
             self.next_token();
 
-            left_expr = infix(self, left_expr);
+            left_expr = infix(self, left_expr.expect("tmp"));
         }
 
         left_expr

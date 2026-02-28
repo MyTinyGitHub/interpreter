@@ -27,8 +27,6 @@ pub fn repl_loop() {
         }
 
         let obj = eval(&Node::Program(program));
-        if let Some(object) = obj {
-            println!("{}\n", object.inspect())
-        }
+        println!("{}\n", obj.inspect())
     }
 }

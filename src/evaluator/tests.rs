@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Node, Program},
+    ast::Node,
     evaluator::{Object, eval},
     lexer::Lexer,
     parser::Parser,
@@ -7,12 +7,24 @@ use crate::{
 
 #[test]
 fn test_integer_eval() {
-    let inputs = ["5", "10"];
-    let expects = [5, 10];
+    let inputs = ["5", "10", "-5", "-10"];
+    let expects = [5, 10, -5, -10];
 
     for (input, expectation) in inputs.iter().zip(expects) {
         let object = test_eval(input);
-        assert!(test_integer_object(object.unwrap(), expectation));
+        assert!(test_integer_object(object, expectation));
+    }
+}
+
+#[test]
+fn test_bang_operation_eval() {
+    let inputs = ["!true", "!false", "!5", "!!true", "!!false", "!!5"];
+    let expects = [false, true, false, true, false, true];
+
+    for (input, expectation) in inputs.iter().zip(expects) {
+        println!("testing {}", input);
+        let object = test_eval(input);
+        assert!(test_boolean_object(object, expectation));
     }
 }
 
@@ -23,11 +35,11 @@ fn test_boolean_eval() {
 
     for (input, expectation) in inputs.iter().zip(expects) {
         let object = test_eval(input);
-        assert!(test_boolean_object(object.unwrap(), expectation));
+        assert!(test_boolean_object(object, expectation));
     }
 }
 
-fn test_eval(input: &str) -> Option<Object> {
+fn test_eval(input: &str) -> Object {
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
 

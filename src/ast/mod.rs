@@ -14,7 +14,7 @@ pub enum Statement {
     Let(LetStatement),
     Return(ReturnStatement),
     Block(BlockStatement),
-    Expression(ExpressionStatement),
+    Expression(Expression),
 }
 
 #[derive(Debug, Clone)]
@@ -82,27 +82,27 @@ pub struct BlockStatement {
 pub struct PrefixExpression {
     pub token: TokenLiteral,
     pub operator: String,
-    pub right: Option<Box<Expression>>,
+    pub right: Box<Expression>,
 }
 
 #[derive(Debug, Clone)]
 pub struct InfixExpression {
     pub token: TokenLiteral,
     pub operator: String,
-    pub right: Option<Box<Expression>>,
-    pub left: Option<Box<Expression>>,
+    pub right: Box<Expression>,
+    pub left: Box<Expression>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ExpressionStatement {
     pub token: TokenLiteral,
-    pub value: Option<Box<Expression>>,
+    pub value: Option<Expression>,
 }
 
 #[derive(Debug, Clone)]
 pub struct IfExpression {
     pub token: TokenLiteral,
-    pub condition: Option<Box<Expression>>,
+    pub condition: Box<Expression>,
     pub consequence: Option<BlockStatement>,
     pub alternative: Option<BlockStatement>,
 }
@@ -110,7 +110,7 @@ pub struct IfExpression {
 #[derive(Debug, Clone)]
 pub struct CallExpresion {
     pub token: TokenLiteral,
-    pub function: Option<Box<Expression>>,
+    pub function: Box<Expression>,
     pub arguments: Vec<Expression>,
 }
 
@@ -335,14 +335,7 @@ impl PrefixExpression {
     }
 
     fn string(&self) -> String {
-        format!(
-            "({}{})",
-            self.operator,
-            match self.right.as_ref() {
-                None => String::new(),
-                Some(v) => v.string(),
-            }
-        )
+        format!("({}{})", self.operator, self.right.as_ref().string(),)
     }
 
     fn expression_node(&self) {}
@@ -356,12 +349,9 @@ impl InfixExpression {
     fn string(&self) -> String {
         format!(
             "({} {} {})",
-            self.left.as_ref().map_or(String::new(), |v| v.string()),
+            self.left.as_ref().string(),
             self.operator,
-            match self.right.as_ref() {
-                None => String::new(),
-                Some(v) => v.string(),
-            }
+            self.right.as_ref().string(),
         )
     }
 
@@ -376,9 +366,7 @@ impl IfExpression {
     fn string(&self) -> String {
         format!(
             "if {} {} {}",
-            self.condition
-                .as_ref()
-                .map_or(String::new(), |v| v.string()),
+            self.condition.as_ref().string(),
             self.consequence
                 .as_ref()
                 .map_or(String::new(), |v| v.string()),
@@ -420,7 +408,7 @@ impl CallExpresion {
     fn string(&self) -> String {
         format!(
             "{}({})",
-            self.function.as_ref().unwrap().string(),
+            self.function.as_ref().string(),
             self.arguments
                 .iter()
                 .map(|v| v.string())
