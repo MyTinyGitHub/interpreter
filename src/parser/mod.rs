@@ -381,11 +381,6 @@ impl Parser {
     fn parse_expresion(&mut self, precedenece: Precedence) -> Option<Expression> {
         let cur_token = self.current_token.token.clone();
 
-        println!(
-            "token: {:?}, precedence: {:?}",
-            self.current_token.token, precedenece
-        );
-
         if !self.prefix_fns.contains_key(&cur_token) {
             self.no_prefix_operator_error(&cur_token);
             return None;
@@ -393,13 +388,6 @@ impl Parser {
 
         let prefix = self.prefix_fns[&cur_token];
         let mut left_expr = prefix(self);
-
-        println!(
-            "token: {:?}, precedence: {:?}",
-            self.current_token.token, precedenece
-        );
-
-        println!("peek_precedence: {:?}", self.peek_token.precedence());
 
         while self.peek_token.token != Token::Semicolon
             && precedenece < self.peek_token.precedence()

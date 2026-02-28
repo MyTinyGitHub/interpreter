@@ -2,6 +2,9 @@ use std::collections::HashMap;
 
 use crate::token::{Token, TokenLiteral};
 
+#[cfg(test)]
+pub mod tests;
+
 pub struct Lexer {
     input: Vec<u8>,
     position: usize,
@@ -270,25 +273,6 @@ fn test_next_token() {
         TokenLiteral::new(Token::Notequal, Some("!=".to_owned())),
         TokenLiteral::new(Token::Int, Some("4".to_owned())),
         TokenLiteral::new(Token::Semicolon, Some(";".to_owned())),
-    ];
-
-    let mut token_processor = Lexer::new(input);
-
-    for token in expectation {
-        assert_eq!(&token, &mut token_processor.next_token());
-    }
-}
-
-#[test]
-fn test_token() {
-    let input = " \n =+(){}";
-    let expectation = [
-        TokenLiteral::new(Token::Assign, Some("=".to_owned())),
-        TokenLiteral::new(Token::Plus, Some("+".to_owned())),
-        TokenLiteral::new(Token::Lparen, Some("(".to_owned())),
-        TokenLiteral::new(Token::Rparen, Some(")".to_owned())),
-        TokenLiteral::new(Token::Lbrace, Some("{".to_owned())),
-        TokenLiteral::new(Token::Rbrace, Some("}".to_owned())),
     ];
 
     let mut token_processor = Lexer::new(input);
