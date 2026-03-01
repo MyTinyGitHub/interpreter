@@ -56,20 +56,20 @@ pub struct BooleanLiteral {
 pub struct FunctionLiteral {
     pub token: TokenLiteral,
     pub parameters: Vec<Identifier>,
-    pub body: Option<BlockStatement>,
+    pub body: BlockStatement,
 }
 
 #[derive(Debug, Clone)]
 pub struct LetStatement {
     pub token: TokenLiteral,
     pub name: Identifier,
-    pub value: Option<Expression>,
+    pub value: Expression,
 }
 
 #[derive(Debug, Clone)]
 pub struct ReturnStatement {
     pub token: TokenLiteral,
-    pub value: Option<Expression>,
+    pub value: Expression,
 }
 
 #[derive(Debug, Clone)]
@@ -97,7 +97,7 @@ pub struct InfixExpression {
 pub struct IfExpression {
     pub token: TokenLiteral,
     pub condition: Box<Expression>,
-    pub consequence: Option<BlockStatement>,
+    pub consequence: BlockStatement,
     pub alternative: Option<BlockStatement>,
 }
 
@@ -199,14 +199,14 @@ impl Statement {
 }
 
 impl LetStatement {
-    pub fn new(token: &TokenLiteral, identifier: &TokenLiteral) -> Self {
+    pub fn new(token: &TokenLiteral, identifier: &TokenLiteral, value: Expression) -> Self {
         Self {
             token: token.clone(),
             name: Identifier {
                 token: identifier.clone(),
                 value: identifier.value.clone().unwrap(),
             },
-            value: None,
+            value,
         }
     }
 
@@ -219,16 +219,16 @@ impl LetStatement {
             "{} {} = {};",
             self.token_literal(),
             self.name.string(),
-            self.value.as_ref().map_or(String::new(), |v| v.string())
+            self.value.string(),
         )
     }
 }
 
 impl ReturnStatement {
-    pub fn new(token: &TokenLiteral) -> Self {
+    pub fn new(token: &TokenLiteral, expr: Expression) -> Self {
         Self {
             token: token.clone(),
-            value: None,
+            value: expr,
         }
     }
 
@@ -237,11 +237,7 @@ impl ReturnStatement {
     }
 
     fn string(&self) -> String {
-        format!(
-            "{} {};",
-            self.token_literal(),
-            self.value.as_ref().map_or(String::new(), |v| v.string())
-        )
+        format!("{} {};", self.token_literal(), self.value.string())
     }
 }
 
@@ -344,9 +340,7 @@ impl IfExpression {
         format!(
             "if {} {} {}",
             self.condition.as_ref().string(),
-            self.consequence
-                .as_ref()
-                .map_or(String::new(), |v| v.string()),
+            self.consequence.string(),
             self.alternative
                 .as_ref()
                 .map_or(String::new(), |v| format!("else {}", v.string()))
@@ -370,7 +364,7 @@ impl FunctionLiteral {
                 .map(|v| v.string())
                 .collect::<Vec<String>>()
                 .join(", "),
-            self.body.as_ref().map_or(String::new(), |v| v.string())
+            self.body.string(),
         )
     }
 

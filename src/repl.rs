@@ -17,14 +17,13 @@ pub fn repl_loop() {
 
         let token_processor = Lexer::new(&input);
         let mut parser = Parser::new(token_processor);
-        let program = parser.parse_program();
-
-        if !parser.errors().is_empty() {
-            for error in parser.errors() {
-                println!("{:?}", error);
+        let program = match parser.parse_program() {
+            Ok(program) => program,
+            Err(error) => {
+                println!("{}", error);
+                continue;
             }
-            continue;
-        }
+        };
 
         let obj = eval(&Node::Program(program));
         println!("{}\n", obj.inspect())

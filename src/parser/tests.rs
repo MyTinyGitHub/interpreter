@@ -2,6 +2,7 @@ use core::panic;
 
 use crate::{
     ast::{Expression, Statement},
+    error::MonkeyError,
     lexer::Lexer,
     parser::Parser,
     token::Token,
@@ -25,7 +26,7 @@ enum TestValue {
 }
 
 #[test]
-fn test_parser() {
+fn test_parser() -> Result<(), MonkeyError> {
     let input = r#"
             let x = 5;
             let y = 10;
@@ -35,7 +36,7 @@ fn test_parser() {
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
 
-    let program = parser.parse_program();
+    let program = parser.parse_program()?;
     check_errors(&parser);
 
     let expected = ["x", "y", "foobar"];
@@ -45,10 +46,12 @@ fn test_parser() {
     for (statement, name) in program.statements.iter().zip(expected.iter()) {
         test_let_statement(statement, name);
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_let_statements() {
+fn test_let_statements() -> Result<(), MonkeyError> {
     let inputs = ["let x = 5;", "let y = true;", "let foobar = y;"];
     let expectations = [vec!["x", "5"], vec!["y", "true"], vec!["foobar", "y"]];
 
@@ -56,7 +59,7 @@ fn test_let_statements() {
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
 
-        let program = parser.parse_program();
+        let program = parser.parse_program()?;
         check_errors(&parser);
 
         assert_eq!(program.statements.len(), 1);
@@ -69,24 +72,23 @@ fn test_let_statements() {
                 assert_eq!(idf.value, expectation[0]);
 
                 let value = &s.value;
-                test_expression(
-                    value.as_ref().unwrap(),
-                    TestValue::String(expectation[1].to_string()),
-                );
+                test_expression(value, TestValue::String(expectation[1].to_string()));
             }
             _ => panic!(),
         }
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_identifier_expression() {
+fn test_identifier_expression() -> Result<(), MonkeyError> {
     let input = "foobar;";
 
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
 
-    let program = parser.parse_program();
+    let program = parser.parse_program()?;
     check_errors(&parser);
 
     assert_eq!(program.statements.len(), 1);
@@ -99,16 +101,18 @@ fn test_identifier_expression() {
         }
         _ => panic!(),
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_integer_expression() {
+fn test_integer_expression() -> Result<(), MonkeyError> {
     let input = "5;";
 
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
 
-    let program = parser.parse_program();
+    let program = parser.parse_program()?;
     check_errors(&parser);
 
     assert_eq!(program.statements.len(), 1);
@@ -119,10 +123,12 @@ fn test_integer_expression() {
         Statement::Expression(s) => test_expression(s, TestValue::String(5.to_string())),
         _ => panic!(),
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_boolean_expression() {
+fn test_boolean_expression() -> Result<(), MonkeyError> {
     let inputs = ["true;", "false"];
     let results = [true, false];
 
@@ -130,7 +136,7 @@ fn test_boolean_expression() {
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
 
-        let program = parser.parse_program();
+        let program = parser.parse_program()?;
         check_errors(&parser);
 
         assert_eq!(program.statements.len(), 1);
@@ -142,6 +148,8 @@ fn test_boolean_expression() {
             _ => panic!(),
         }
     }
+
+    Ok(())
 }
 
 fn test_expression(expression: &Expression, value: TestValue) {
@@ -171,7 +179,7 @@ fn test_expression(expression: &Expression, value: TestValue) {
 }
 
 #[test]
-fn test_return() {
+fn test_return() -> Result<(), MonkeyError> {
     let input = r#"
             return 5;
             return 10;
@@ -181,16 +189,18 @@ fn test_return() {
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
 
-    let program = parser.parse_program();
+    let program = parser.parse_program()?;
     check_errors(&parser);
 
     for statement in program.statements.iter() {
         test_return_statement(statement);
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_function_params() {
+fn test_function_params() -> Result<(), MonkeyError> {
     let inputs = ["fn(){}", "fn(x){}", "fn(x, y){}"];
     let exp_params = [vec![], vec!["x"], vec!["x", "y"]];
 
@@ -198,7 +208,7 @@ fn test_function_params() {
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
 
-        let program = parser.parse_program();
+        let program = parser.parse_program()?;
         check_errors(&parser);
 
         let statement = &program.statements[0];
@@ -213,16 +223,18 @@ fn test_function_params() {
             _ => panic!(),
         }
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_call_expresion() {
+fn test_call_expresion() -> Result<(), MonkeyError> {
     let input = "add(1, 2 * 3, 4 + 5)";
 
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
 
-    let program = parser.parse_program();
+    let program = parser.parse_program()?;
     check_errors(&parser);
 
     let statement = &program.statements[0];
@@ -258,17 +270,19 @@ fn test_call_expresion() {
         }
         _ => panic!(),
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_function() {
+fn test_function() -> Result<(), MonkeyError> {
     let input = "fn(a,b,c) { a }";
     let exp_params = vec!["a", "b", "c"];
 
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
 
-    let program = parser.parse_program();
+    let program = parser.parse_program()?;
     check_errors(&parser);
 
     let statement = &program.statements[0];
@@ -280,7 +294,7 @@ fn test_function() {
                 assert_eq!(param.value, expected);
             }
 
-            let statement = &fun.body.as_ref().unwrap().statements[0];
+            let statement = &fun.body.statements[0];
 
             match statement {
                 Statement::Expression(s) => {
@@ -291,10 +305,12 @@ fn test_function() {
         }
         _ => panic!(),
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_prefix_opertor() {
+fn test_prefix_opertor() -> Result<(), MonkeyError> {
     let inputs = ["!5;", "-15;"];
     let expected = [("!", 5), ("-", 15)];
 
@@ -302,7 +318,7 @@ fn test_prefix_opertor() {
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
 
-        let program = parser.parse_program();
+        let program = parser.parse_program()?;
         check_errors(&parser);
 
         let statement = &program.statements[0];
@@ -320,10 +336,12 @@ fn test_prefix_opertor() {
             _ => panic!(),
         }
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_infix_opertor() {
+fn test_infix_opertor() -> Result<(), MonkeyError> {
     let inputs = [
         "5 + 5;", "5 - 5;", "5 * 5;", "5 / 5;", "5 > 5;", "5 < 5;", "5 == 5;", "5 != 5;",
     ];
@@ -343,7 +361,7 @@ fn test_infix_opertor() {
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
 
-        let program = parser.parse_program();
+        let program = parser.parse_program()?;
         check_errors(&parser);
 
         let statement = &program.statements[0];
@@ -362,15 +380,17 @@ fn test_infix_opertor() {
             _ => panic!(),
         }
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_if_else_condition() {
+fn test_if_else_condition() -> Result<(), MonkeyError> {
     let input = "if (a == b) { y } else { x }";
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
 
-    let program = parser.parse_program();
+    let program = parser.parse_program()?;
     check_errors(&parser);
 
     assert_eq!(program.statements.len(), 1);
@@ -384,7 +404,7 @@ fn test_if_else_condition() {
                     right: Box::new(TestValue::String("b".to_string())),
                 }),
             );
-            let statement = &expr.consequence.as_ref().unwrap().statements[0];
+            let statement = &expr.consequence.statements[0];
 
             match statement {
                 Statement::Expression(s) => {
@@ -404,10 +424,12 @@ fn test_if_else_condition() {
         }
         _ => panic!(),
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_infix_opertor_more() {
+fn test_infix_opertor_more() -> Result<(), MonkeyError> {
     let inputs = [
         "-a * b",
         "!-a",
@@ -462,12 +484,14 @@ fn test_infix_opertor_more() {
         let lexer = Lexer::new(input);
         let mut parser = Parser::new(lexer);
 
-        let program = parser.parse_program();
+        let program = parser.parse_program()?;
         println!("Testing {}, {}", input, expected);
         check_errors(&parser);
 
         assert_eq!(program.string(), expected);
     }
+
+    Ok(())
 }
 
 fn test_let_statement(statement: &Statement, name: &str) {
