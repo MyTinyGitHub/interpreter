@@ -55,11 +55,11 @@ pub enum Token {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct TokenLiteral {
     pub token: Token,
-    pub value: Option<String>,
+    pub value: String,
 }
 
 impl TokenLiteral {
-    pub fn new(token: Token, value: Option<String>) -> Self {
+    pub fn new(token: Token, value: String) -> Self {
         Self { token, value }
     }
 

@@ -204,14 +204,14 @@ impl LetStatement {
             token: token.clone(),
             name: Identifier {
                 token: identifier.clone(),
-                value: identifier.value.clone().unwrap(),
+                value: identifier.value.clone(),
             },
             value,
         }
     }
 
     fn token_literal(&self) -> String {
-        self.token.value.clone().unwrap().to_string()
+        self.token.value.clone().to_string()
     }
 
     fn string(&self) -> String {
@@ -233,7 +233,7 @@ impl ReturnStatement {
     }
 
     fn token_literal(&self) -> String {
-        self.token.value.clone().unwrap().to_string()
+        self.token.value.clone().to_string()
     }
 
     fn string(&self) -> String {
@@ -250,7 +250,7 @@ impl BlockStatement {
     }
 
     fn token_literal(&self) -> String {
-        self.token.value.clone().unwrap().to_string()
+        self.token.value.clone().to_string()
     }
 
     fn string(&self) -> String {
@@ -268,11 +268,11 @@ impl BlockStatement {
 
 impl IntegerLiteral {
     fn token_literal(&self) -> String {
-        self.token.value.clone().unwrap()
+        self.token.value.clone()
     }
 
     fn string(&self) -> String {
-        self.token.value.clone().unwrap()
+        self.token.value.clone()
     }
 
     fn expression_node(&self) {}
@@ -280,11 +280,11 @@ impl IntegerLiteral {
 
 impl BooleanLiteral {
     fn token_literal(&self) -> String {
-        self.token.value.clone().unwrap()
+        self.token.value.clone()
     }
 
     fn string(&self) -> String {
-        self.token.value.clone().unwrap()
+        self.token.value.clone()
     }
 
     fn expression_node(&self) {}
@@ -292,7 +292,7 @@ impl BooleanLiteral {
 
 impl Identifier {
     fn token_literal(&self) -> String {
-        self.token.value.clone().unwrap().to_string()
+        self.token.value.clone().to_string()
     }
 
     fn string(&self) -> String {
@@ -304,7 +304,7 @@ impl Identifier {
 
 impl PrefixExpression {
     fn token_literal(&self) -> String {
-        self.token.value.clone().unwrap()
+        self.token.value.clone()
     }
 
     fn string(&self) -> String {
@@ -316,7 +316,7 @@ impl PrefixExpression {
 
 impl InfixExpression {
     fn token_literal(&self) -> String {
-        self.token.value.clone().unwrap()
+        self.token.value.clone()
     }
 
     fn string(&self) -> String {
@@ -333,7 +333,7 @@ impl InfixExpression {
 
 impl IfExpression {
     fn token_literal(&self) -> String {
-        self.token.value.clone().unwrap()
+        self.token.value.clone()
     }
 
     fn string(&self) -> String {
@@ -352,7 +352,7 @@ impl IfExpression {
 
 impl FunctionLiteral {
     fn token_literal(&self) -> String {
-        self.token.value.clone().unwrap()
+        self.token.value.clone()
     }
 
     fn string(&self) -> String {
@@ -373,7 +373,7 @@ impl FunctionLiteral {
 
 impl CallExpresion {
     fn token_literal(&self) -> String {
-        self.token.value.clone().unwrap()
+        self.token.value.clone()
     }
 
     fn string(&self) -> String {

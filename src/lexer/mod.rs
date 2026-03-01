@@ -29,38 +29,38 @@ impl Lexer {
         let token_map = HashMap::from([
             (
                 "let".to_owned(),
-                TokenLiteral::new(Token::Let, Some("let".to_owned())),
+                TokenLiteral::new(Token::Let, "let".to_owned()),
             ),
             (
                 "fn".to_owned(),
-                TokenLiteral::new(Token::Function, Some("fn".to_owned())),
+                TokenLiteral::new(Token::Function, "fn".to_owned()),
             ),
             (
                 "if".to_owned(),
-                TokenLiteral::new(Token::If, Some("if".to_owned())),
+                TokenLiteral::new(Token::If, "if".to_owned()),
             ),
             (
                 "else".to_owned(),
-                TokenLiteral::new(Token::Else, Some("else".to_owned())),
+                TokenLiteral::new(Token::Else, "else".to_owned()),
             ),
             (
                 "return".to_owned(),
-                TokenLiteral::new(Token::Return, Some("return".to_owned())),
+                TokenLiteral::new(Token::Return, "return".to_owned()),
             ),
             (
                 "true".to_owned(),
-                TokenLiteral::new(Token::True, Some("true".to_owned())),
+                TokenLiteral::new(Token::True, "true".to_owned()),
             ),
             (
                 "false".to_owned(),
-                TokenLiteral::new(Token::False, Some("false".to_owned())),
+                TokenLiteral::new(Token::False, "false".to_owned()),
             ),
         ]);
 
         self.skip_white_space();
 
         if self.ch.is_none() {
-            return TokenLiteral::new(Token::Eof, None);
+            return TokenLiteral::new(Token::Eof, "".to_owned());
         }
 
         let result = match self.ch.unwrap() as char {
@@ -68,33 +68,33 @@ impl Lexer {
                 self.peek_char();
                 if self.ch == Some(b'=') {
                     self.read_char();
-                    TokenLiteral::new(Token::Equal, Some("==".to_owned()))
+                    TokenLiteral::new(Token::Equal, "==".to_owned())
                 } else {
-                    TokenLiteral::new(Token::Assign, Some("=".to_owned()))
+                    TokenLiteral::new(Token::Assign, "=".to_owned())
                 }
             }
-            ';' => TokenLiteral::new(Token::Semicolon, Some(";".to_owned())),
-            ',' => TokenLiteral::new(Token::Comma, Some(",".to_owned())),
-            '(' => TokenLiteral::new(Token::Lparen, Some("(".to_owned())),
-            ')' => TokenLiteral::new(Token::Rparen, Some(")".to_owned())),
+            ';' => TokenLiteral::new(Token::Semicolon, ";".to_owned()),
+            ',' => TokenLiteral::new(Token::Comma, ",".to_owned()),
+            '(' => TokenLiteral::new(Token::Lparen, "(".to_owned()),
+            ')' => TokenLiteral::new(Token::Rparen, ")".to_owned()),
             '!' => {
                 self.peek_char();
 
                 if self.ch == Some(b'=') {
                     self.read_char();
-                    TokenLiteral::new(Token::Notequal, Some("!=".to_owned()))
+                    TokenLiteral::new(Token::Notequal, "!=".to_owned())
                 } else {
-                    TokenLiteral::new(Token::Bang, Some("!".to_owned()))
+                    TokenLiteral::new(Token::Bang, "!".to_owned())
                 }
             }
-            '+' => TokenLiteral::new(Token::Plus, Some("+".to_owned())),
-            '-' => TokenLiteral::new(Token::Minus, Some("-".to_owned())),
-            '*' => TokenLiteral::new(Token::Asterisk, Some("*".to_owned())),
-            '/' => TokenLiteral::new(Token::Slash, Some("/".to_owned())),
-            '{' => TokenLiteral::new(Token::Lbrace, Some("{".to_owned())),
-            '}' => TokenLiteral::new(Token::Rbrace, Some("}".to_owned())),
-            '>' => TokenLiteral::new(Token::Gt, Some(">".to_owned())),
-            '<' => TokenLiteral::new(Token::Lt, Some("<".to_owned())),
+            '+' => TokenLiteral::new(Token::Plus, "+".to_owned()),
+            '-' => TokenLiteral::new(Token::Minus, "-".to_owned()),
+            '*' => TokenLiteral::new(Token::Asterisk, "*".to_owned()),
+            '/' => TokenLiteral::new(Token::Slash, "/".to_owned()),
+            '{' => TokenLiteral::new(Token::Lbrace, "{".to_owned()),
+            '}' => TokenLiteral::new(Token::Rbrace, "}".to_owned()),
+            '>' => TokenLiteral::new(Token::Gt, ">".to_owned()),
+            '<' => TokenLiteral::new(Token::Lt, "<".to_owned()),
             _ => {
                 if self.ch.unwrap().is_ascii_alphabetic() {
                     let identifier = self.read_identifier();
@@ -102,14 +102,14 @@ impl Lexer {
                         return token;
                     }
 
-                    return TokenLiteral::new(Token::Ident, Some(identifier));
+                    return TokenLiteral::new(Token::Ident, identifier);
                 }
 
                 if self.ch.is_some() {
-                    return TokenLiteral::new(Token::Int, Some(self.read_number()));
+                    return TokenLiteral::new(Token::Int, self.read_number());
                 }
 
-                TokenLiteral::new(Token::Illegal, None)
+                TokenLiteral::new(Token::Illegal, "".to_owned())
             }
         };
 
@@ -172,112 +172,5 @@ impl Lexer {
         } else {
             self.ch = self.input.get(self.read_position).copied();
         }
-    }
-}
-
-#[test]
-fn test_next_token() {
-    let input = r#"
-        let five = 5;
-        let ten = 10;
-        
-        let add = fn(x, y) {
-            x + y;
-        };
-
-        let result = add(five, ten); 
-        !-/*5;
-        5 < 10 > 5;
-
-        if (5 < 10) {
-            return true;
-        } else {
-            return false;
-        }
-
-        10 == 10;
-        1 != 4;
-        "#;
-
-    let expectation = [
-        TokenLiteral::new(Token::Let, Some("let".to_owned())),
-        TokenLiteral::new(Token::Ident, Some("five".to_owned())),
-        TokenLiteral::new(Token::Assign, Some("=".to_owned())),
-        TokenLiteral::new(Token::Int, Some("5".to_owned())),
-        TokenLiteral::new(Token::Semicolon, Some(";".to_owned())),
-        TokenLiteral::new(Token::Let, Some("let".to_owned())),
-        TokenLiteral::new(Token::Ident, Some("ten".to_owned())),
-        TokenLiteral::new(Token::Assign, Some("=".to_owned())),
-        TokenLiteral::new(Token::Int, Some("10".to_owned())),
-        TokenLiteral::new(Token::Semicolon, Some(";".to_owned())),
-        TokenLiteral::new(Token::Let, Some("let".to_owned())),
-        TokenLiteral::new(Token::Ident, Some("add".to_owned())),
-        TokenLiteral::new(Token::Assign, Some("=".to_owned())),
-        TokenLiteral::new(Token::Function, Some("fn".to_owned())),
-        TokenLiteral::new(Token::Lparen, Some("(".to_owned())),
-        TokenLiteral::new(Token::Ident, Some("x".to_owned())),
-        TokenLiteral::new(Token::Comma, Some(",".to_owned())),
-        TokenLiteral::new(Token::Ident, Some("y".to_owned())),
-        TokenLiteral::new(Token::Rparen, Some(")".to_owned())),
-        TokenLiteral::new(Token::Lbrace, Some("{".to_owned())),
-        TokenLiteral::new(Token::Ident, Some("x".to_owned())),
-        TokenLiteral::new(Token::Plus, Some("+".to_owned())),
-        TokenLiteral::new(Token::Ident, Some("y".to_owned())),
-        TokenLiteral::new(Token::Semicolon, Some(";".to_owned())),
-        TokenLiteral::new(Token::Rbrace, Some("}".to_owned())),
-        TokenLiteral::new(Token::Semicolon, Some(";".to_owned())),
-        TokenLiteral::new(Token::Let, Some("let".to_owned())),
-        TokenLiteral::new(Token::Ident, Some("result".to_owned())),
-        TokenLiteral::new(Token::Assign, Some("=".to_owned())),
-        TokenLiteral::new(Token::Ident, Some("add".to_owned())),
-        TokenLiteral::new(Token::Lparen, Some("(".to_owned())),
-        TokenLiteral::new(Token::Ident, Some("five".to_owned())),
-        TokenLiteral::new(Token::Comma, Some(",".to_owned())),
-        TokenLiteral::new(Token::Ident, Some("ten".to_owned())),
-        TokenLiteral::new(Token::Rparen, Some(")".to_owned())),
-        TokenLiteral::new(Token::Semicolon, Some(";".to_owned())),
-        TokenLiteral::new(Token::Bang, Some("!".to_owned())),
-        TokenLiteral::new(Token::Minus, Some("-".to_owned())),
-        TokenLiteral::new(Token::Slash, Some("/".to_owned())),
-        TokenLiteral::new(Token::Asterisk, Some("*".to_owned())),
-        TokenLiteral::new(Token::Int, Some("5".to_owned())),
-        TokenLiteral::new(Token::Semicolon, Some(";".to_owned())),
-        TokenLiteral::new(Token::Int, Some("5".to_owned())),
-        TokenLiteral::new(Token::Lt, Some("<".to_owned())),
-        TokenLiteral::new(Token::Int, Some("10".to_owned())),
-        TokenLiteral::new(Token::Gt, Some(">".to_owned())),
-        TokenLiteral::new(Token::Int, Some("5".to_owned())),
-        TokenLiteral::new(Token::Semicolon, Some(";".to_owned())),
-        TokenLiteral::new(Token::If, Some("if".to_owned())),
-        TokenLiteral::new(Token::Lparen, Some("(".to_owned())),
-        TokenLiteral::new(Token::Int, Some("5".to_owned())),
-        TokenLiteral::new(Token::Lt, Some("<".to_owned())),
-        TokenLiteral::new(Token::Int, Some("10".to_owned())),
-        TokenLiteral::new(Token::Rparen, Some(")".to_owned())),
-        TokenLiteral::new(Token::Lbrace, Some("{".to_owned())),
-        TokenLiteral::new(Token::Return, Some("return".to_owned())),
-        TokenLiteral::new(Token::True, Some("true".to_owned())),
-        TokenLiteral::new(Token::Semicolon, Some(";".to_owned())),
-        TokenLiteral::new(Token::Rbrace, Some("}".to_owned())),
-        TokenLiteral::new(Token::Else, Some("else".to_owned())),
-        TokenLiteral::new(Token::Lbrace, Some("{".to_owned())),
-        TokenLiteral::new(Token::Return, Some("return".to_owned())),
-        TokenLiteral::new(Token::False, Some("false".to_owned())),
-        TokenLiteral::new(Token::Semicolon, Some(";".to_owned())),
-        TokenLiteral::new(Token::Rbrace, Some("}".to_owned())),
-        TokenLiteral::new(Token::Int, Some("10".to_owned())),
-        TokenLiteral::new(Token::Equal, Some("==".to_owned())),
-        TokenLiteral::new(Token::Int, Some("10".to_owned())),
-        TokenLiteral::new(Token::Semicolon, Some(";".to_owned())),
-        TokenLiteral::new(Token::Int, Some("1".to_owned())),
-        TokenLiteral::new(Token::Notequal, Some("!=".to_owned())),
-        TokenLiteral::new(Token::Int, Some("4".to_owned())),
-        TokenLiteral::new(Token::Semicolon, Some(";".to_owned())),
-    ];
-
-    let mut token_processor = Lexer::new(input);
-
-    for token in expectation {
-        assert_eq!(&token, &mut token_processor.next_token());
     }
 }

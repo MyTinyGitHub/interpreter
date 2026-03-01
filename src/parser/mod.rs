@@ -21,7 +21,6 @@ pub struct Parser {
     lexer: Lexer,
     current_token: TokenLiteral,
     peek_token: TokenLiteral,
-    errors: Vec<String>,
     prefix_fns: HashMap<Token, PrefixParserFn>,
     infix_fns: HashMap<Token, InfixParserFn>,
 }
@@ -30,9 +29,8 @@ impl Parser {
     pub fn new(lexer: Lexer) -> Self {
         let mut result = Self {
             lexer,
-            current_token: TokenLiteral::new(Token::Start, None),
-            peek_token: TokenLiteral::new(Token::Start, None),
-            errors: Vec::new(),
+            current_token: TokenLiteral::new(Token::Start, "".to_owned()),
+            peek_token: TokenLiteral::new(Token::Start, "".to_owned()),
             prefix_fns: HashMap::new(),
             infix_fns: HashMap::new(),
         };
@@ -101,41 +99,36 @@ impl Parser {
         Ok(Expression::Call(CallExpresion {
             token: self.current_token.clone(),
             function: Box::new(function),
-            arguments: self.parse_call_arguments(),
+            arguments: self.parse_call_arguments()?,
         }))
     }
 
-    fn parse_call_arguments(&mut self) -> Vec<Expression> {
+    fn parse_call_arguments(&mut self) -> Result<Vec<Expression>, MonkeyError> {
         let mut arguments: Vec<Expression> = vec![];
 
         if self.peek_token.token == Token::Rparen {
             self.next_token();
-            return arguments;
+            return Ok(arguments);
         }
 
         self.next_token();
 
-        arguments.push(
-            self.parse_expresion(Precedence::Lowest)
-                .expect("Unable to parse the expresion"),
-        );
+        arguments.push(self.parse_expresion(Precedence::Lowest)?);
 
         while self.peek_token.token == Token::Comma {
             self.next_token();
             self.next_token();
-            arguments.push(
-                self.parse_expresion(Precedence::Lowest)
-                    .expect("Unable to parse the expresion"),
-            );
+
+            arguments.push(self.parse_expresion(Precedence::Lowest)?);
         }
 
         if self.peek_token.token != Token::Rparen {
-            return vec![];
+            return Ok(vec![]);
         }
 
         self.next_token();
 
-        arguments
+        Ok(arguments)
     }
 
     fn parse_if(&mut self) -> Result<Expression, MonkeyError> {
@@ -146,7 +139,7 @@ impl Parser {
         self.next_token();
         self.next_token();
 
-        let condition = self.parse_expresion(Precedence::Lowest).expect("tmp");
+        let condition = self.parse_expresion(Precedence::Lowest)?;
 
         self.expect_peek(Token::Rparen)?;
 
@@ -185,9 +178,7 @@ impl Parser {
 
         self.next_token();
 
-        let parameters = self
-            .parse_function_parameters()
-            .expect("Unable to parse the function parameters");
+        let parameters = self.parse_function_parameters()?;
 
         self.expect_peek(Token::Lbrace)?;
 
@@ -214,7 +205,7 @@ impl Parser {
 
         identifiers.push(Identifier {
             token: self.current_token.clone(),
-            value: self.current_token.value.clone().unwrap(),
+            value: self.current_token.value.clone(),
         });
 
         while self.peek_token.token == Token::Comma {
@@ -223,7 +214,7 @@ impl Parser {
 
             identifiers.push(Identifier {
                 token: self.current_token.clone(),
-                value: self.current_token.value.clone().unwrap(),
+                value: self.current_token.value.clone(),
             });
         }
 
@@ -254,7 +245,7 @@ impl Parser {
     fn parse_identifier(&mut self) -> Result<Expression, MonkeyError> {
         Ok(Expression::Identifier(Identifier {
             token: self.current_token.clone(),
-            value: self.current_token.value.clone().unwrap(),
+            value: self.current_token.value.clone(),
         }))
     }
 
@@ -286,23 +277,20 @@ impl Parser {
 
     fn parse_prefix_expression(&mut self) -> Result<Expression, MonkeyError> {
         let token = self.current_token.clone();
-        let operator = self.current_token.value.clone().unwrap();
+        let operator = self.current_token.value.clone();
 
         self.next_token();
 
         Ok(Expression::Prefix(PrefixExpression {
             token,
             operator,
-            right: self
-                .parse_expresion(Precedence::Prefix)
-                .map(Box::new)
-                .expect("tmp"),
+            right: Box::new(self.parse_expresion(Precedence::Prefix)?),
         }))
     }
 
     fn parse_infix(&mut self, expr: Expression) -> Result<Expression, MonkeyError> {
         let token = self.current_token.clone();
-        let operator = self.current_token.value.clone().unwrap();
+        let operator = self.current_token.value.clone();
         let precedence = self.current_token.precedence();
 
         self.next_token();
@@ -310,7 +298,7 @@ impl Parser {
         Ok(Expression::Infix(InfixExpression {
             token,
             operator,
-            right: self.parse_expresion(precedence).map(Box::new).expect("tmp"),
+            right: Box::new(self.parse_expresion(precedence)?),
             left: Box::new(expr),
         }))
     }
@@ -318,12 +306,13 @@ impl Parser {
     fn parse_integer_literal(&mut self) -> Result<Expression, MonkeyError> {
         Ok(Expression::IntegerLiteral(IntegerLiteral {
             token: self.current_token.clone(),
-            value: self.current_token.value.clone().unwrap().parse().unwrap(),
+            value: self
+                .current_token
+                .value
+                .clone()
+                .parse()
+                .map_err(|e| MonkeyError::Lexer(format!("{}", e)))?,
         }))
-    }
-
-    pub fn errors(&self) -> &[String] {
-        &self.errors
     }
 
     fn no_prefix_operator_error(&mut self, token: &Token) -> Result<(), MonkeyError> {
@@ -431,7 +420,7 @@ impl Parser {
 
         let name = Identifier {
             token: self.current_token.clone(),
-            value: self.current_token.value.clone().unwrap(),
+            value: self.current_token.value.clone(),
         };
 
         self.expect_peek(Token::Assign)?;

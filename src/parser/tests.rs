@@ -37,7 +37,6 @@ fn test_parser() -> Result<(), MonkeyError> {
     let mut parser = Parser::new(lexer);
 
     let program = parser.parse_program()?;
-    check_errors(&parser);
 
     let expected = ["x", "y", "foobar"];
 
@@ -60,7 +59,6 @@ fn test_let_statements() -> Result<(), MonkeyError> {
         let mut parser = Parser::new(lexer);
 
         let program = parser.parse_program()?;
-        check_errors(&parser);
 
         assert_eq!(program.statements.len(), 1);
 
@@ -89,7 +87,6 @@ fn test_identifier_expression() -> Result<(), MonkeyError> {
     let mut parser = Parser::new(lexer);
 
     let program = parser.parse_program()?;
-    check_errors(&parser);
 
     assert_eq!(program.statements.len(), 1);
 
@@ -113,7 +110,6 @@ fn test_integer_expression() -> Result<(), MonkeyError> {
     let mut parser = Parser::new(lexer);
 
     let program = parser.parse_program()?;
-    check_errors(&parser);
 
     assert_eq!(program.statements.len(), 1);
 
@@ -137,7 +133,6 @@ fn test_boolean_expression() -> Result<(), MonkeyError> {
         let mut parser = Parser::new(lexer);
 
         let program = parser.parse_program()?;
-        check_errors(&parser);
 
         assert_eq!(program.statements.len(), 1);
 
@@ -190,7 +185,6 @@ fn test_return() -> Result<(), MonkeyError> {
     let mut parser = Parser::new(lexer);
 
     let program = parser.parse_program()?;
-    check_errors(&parser);
 
     for statement in program.statements.iter() {
         test_return_statement(statement);
@@ -209,7 +203,6 @@ fn test_function_params() -> Result<(), MonkeyError> {
         let mut parser = Parser::new(lexer);
 
         let program = parser.parse_program()?;
-        check_errors(&parser);
 
         let statement = &program.statements[0];
 
@@ -235,7 +228,6 @@ fn test_call_expresion() -> Result<(), MonkeyError> {
     let mut parser = Parser::new(lexer);
 
     let program = parser.parse_program()?;
-    check_errors(&parser);
 
     let statement = &program.statements[0];
 
@@ -283,7 +275,6 @@ fn test_function() -> Result<(), MonkeyError> {
     let mut parser = Parser::new(lexer);
 
     let program = parser.parse_program()?;
-    check_errors(&parser);
 
     let statement = &program.statements[0];
 
@@ -319,7 +310,6 @@ fn test_prefix_opertor() -> Result<(), MonkeyError> {
         let mut parser = Parser::new(lexer);
 
         let program = parser.parse_program()?;
-        check_errors(&parser);
 
         let statement = &program.statements[0];
 
@@ -362,7 +352,6 @@ fn test_infix_opertor() -> Result<(), MonkeyError> {
         let mut parser = Parser::new(lexer);
 
         let program = parser.parse_program()?;
-        check_errors(&parser);
 
         let statement = &program.statements[0];
 
@@ -391,7 +380,6 @@ fn test_if_else_condition() -> Result<(), MonkeyError> {
     let mut parser = Parser::new(lexer);
 
     let program = parser.parse_program()?;
-    check_errors(&parser);
 
     assert_eq!(program.statements.len(), 1);
     match &program.statements[0] {
@@ -413,7 +401,11 @@ fn test_if_else_condition() -> Result<(), MonkeyError> {
                 _ => panic!(),
             }
 
-            let statement = &expr.alternative.as_ref().unwrap().statements[0];
+            let statement = &expr
+                .alternative
+                .as_ref()
+                .expect("Expected alternative value")
+                .statements[0];
 
             match statement {
                 Statement::Expression(s) => {
@@ -485,8 +477,6 @@ fn test_infix_opertor_more() -> Result<(), MonkeyError> {
         let mut parser = Parser::new(lexer);
 
         let program = parser.parse_program()?;
-        println!("Testing {}, {}", input, expected);
-        check_errors(&parser);
 
         assert_eq!(program.string(), expected);
     }
@@ -508,12 +498,4 @@ fn test_return_statement(statement: &Statement) {
         Statement::Return(_) => (),
         _ => panic!(),
     }
-}
-
-fn check_errors(parser: &Parser) {
-    for error in parser.errors() {
-        println!("parser error: {}", error);
-    }
-
-    assert!(parser.errors.is_empty());
 }
