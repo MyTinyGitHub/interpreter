@@ -92,7 +92,7 @@ fn test_eval(input: &str) -> Result<Object, MonkeyError> {
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program()?;
 
-    Ok(eval(&Node::Program(program)))
+    eval(&Node::Program(program))
 }
 
 fn test_integer_object(object: Object, expect: i64) -> bool {

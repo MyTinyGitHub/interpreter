@@ -25,7 +25,14 @@ pub fn repl_loop() {
             }
         };
 
-        let obj = eval(&Node::Program(program));
+        let obj = match eval(&Node::Program(program)) {
+            Ok(obj) => obj,
+            Err(error) => {
+                println!("{}", error);
+                continue;
+            }
+        };
+
         println!("{}\n", obj.inspect())
     }
 }
