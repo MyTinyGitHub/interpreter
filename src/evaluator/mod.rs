@@ -41,10 +41,49 @@ pub fn eval(node: &Node) -> Object {
                     let right = eval(&Node::Statement(Statement::Expression(expression)));
                     eval_prefix(&prefix.operator, right)
                 }
+                Expression::Infix(infix) => {
+                    let right = eval(&Node::Statement(Statement::Expression(
+                        *infix.right.clone(),
+                    )));
+                    let left = eval(&Node::Statement(Statement::Expression(*infix.left.clone())));
+                    eval_infix(&infix.operator, left, right)
+                }
                 _ => Object::Null,
             },
             _ => Object::Null,
         },
+    }
+}
+
+pub fn eval_infix(operator: &str, left: Object, right: Object) -> Object {
+    match (left, right) {
+        (Object::Integer(l), Object::Integer(r)) => eval_integer_infix(operator, l, r),
+        (Object::Boolean(l), Object::Boolean(r)) => eval_boolean_infix(operator, l, r),
+        _ => panic!("Not compatible types"),
+    }
+}
+
+pub fn eval_boolean_infix(operator: &str, left: bool, right: bool) -> Object {
+    match operator {
+        "==" => Object::Boolean(left == right),
+        "!=" => Object::Boolean(left != right),
+        _ => panic!("incompatible boolean operation"),
+    }
+}
+
+pub fn eval_integer_infix(operator: &str, left: i64, right: i64) -> Object {
+    match operator {
+        "+" => Object::Integer(left + right),
+        "*" => Object::Integer(left * right),
+        "-" => Object::Integer(left - right),
+        "/" => Object::Integer(left / right),
+        "==" => Object::Boolean(left == right),
+        "!=" => Object::Boolean(left != right),
+        "<" => Object::Boolean(left < right),
+        ">" => Object::Boolean(left > right),
+        ">=" => Object::Boolean(left >= right),
+        "<=" => Object::Boolean(left <= right),
+        _ => panic!("incompatible integer operation"),
     }
 }
 
