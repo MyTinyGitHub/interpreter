@@ -94,12 +94,6 @@ pub struct InfixExpression {
 }
 
 #[derive(Debug, Clone)]
-pub struct ExpressionStatement {
-    pub token: TokenLiteral,
-    pub value: Option<Expression>,
-}
-
-#[derive(Debug, Clone)]
 pub struct IfExpression {
     pub token: TokenLiteral,
     pub condition: Box<Expression>,
@@ -227,23 +221,6 @@ impl LetStatement {
             self.name.string(),
             self.value.as_ref().map_or(String::new(), |v| v.string())
         )
-    }
-}
-
-impl ExpressionStatement {
-    pub fn new(token: &TokenLiteral) -> Self {
-        Self {
-            token: token.clone(),
-            value: None,
-        }
-    }
-
-    fn token_literal(&self) -> String {
-        self.token.value.clone().unwrap().to_string()
-    }
-
-    fn string(&self) -> String {
-        self.value.as_ref().map_or(String::new(), |v| v.string())
     }
 }
 

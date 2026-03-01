@@ -1,4 +1,4 @@
-use crate::ast::{Expression, ExpressionStatement, Node, Statement};
+use crate::ast::{Expression, Node, Statement};
 
 type ObjectType = String;
 
@@ -34,8 +34,8 @@ pub fn eval(node: &Node) -> Object {
         Node::Program(prog) => eval_statements(&prog.statements),
         Node::Statement(stmt) => match stmt {
             Statement::Expression(expr) => match expr {
-                Expression::IntegerLiteral(integer) => return Object::Integer(integer.value),
-                Expression::Boolean(boolean) => return Object::Boolean(boolean.value),
+                Expression::IntegerLiteral(integer) => Object::Integer(integer.value),
+                Expression::Boolean(boolean) => Object::Boolean(boolean.value),
                 Expression::Prefix(prefix) => {
                     let expression = *prefix.right.clone();
                     let right = eval(&Node::Statement(Statement::Expression(expression)));
@@ -79,4 +79,3 @@ pub fn eval_statements(statements: &Vec<Statement>) -> Object {
 
     result
 }
-

@@ -95,7 +95,7 @@ fn test_identifier_expression() {
 
     match statement {
         Statement::Expression(s) => {
-            test_expression(&s, TestValue::String("foobar".to_string()));
+            test_expression(s, TestValue::String("foobar".to_string()));
         }
         _ => panic!(),
     }
@@ -116,7 +116,7 @@ fn test_integer_expression() {
     let statement = &program.statements[0];
 
     match statement {
-        Statement::Expression(s) => test_expression(&s, TestValue::String(5.to_string())),
+        Statement::Expression(s) => test_expression(s, TestValue::String(5.to_string())),
         _ => panic!(),
     }
 }
@@ -138,7 +138,7 @@ fn test_boolean_expression() {
         let statement = &program.statements[0];
 
         match statement {
-            Statement::Expression(s) => test_expression(&s, TestValue::String(result.to_string())),
+            Statement::Expression(s) => test_expression(s, TestValue::String(result.to_string())),
             _ => panic!(),
         }
     }
@@ -204,15 +204,12 @@ fn test_function_params() {
         let statement = &program.statements[0];
 
         match statement {
-            Statement::Expression(expr) => match expr {
-                Expression::Function(fun) => {
-                    assert_eq!(fun.token.token, Token::Function);
-                    for (param, expected) in fun.parameters.iter().zip(expected) {
-                        assert_eq!(param.value, expected);
-                    }
+            Statement::Expression(Expression::Function(fun)) => {
+                assert_eq!(fun.token.token, Token::Function);
+                for (param, expected) in fun.parameters.iter().zip(expected) {
+                    assert_eq!(param.value, expected);
                 }
-                _ => panic!(),
-            },
+            }
             _ => panic!(),
         }
     }
@@ -231,37 +228,34 @@ fn test_call_expresion() {
     let statement = &program.statements[0];
 
     match statement {
-        Statement::Expression(expr) => match expr {
-            Expression::Call(call) => {
-                test_expression(&call.function, TestValue::String("add".to_string()));
+        Statement::Expression(Expression::Call(call)) => {
+            test_expression(&call.function, TestValue::String("add".to_string()));
 
-                assert_eq!(call.arguments.len(), 3);
+            assert_eq!(call.arguments.len(), 3);
 
-                let argument = &call.arguments[0];
-                test_expression(argument, TestValue::String("1".to_string()));
+            let argument = &call.arguments[0];
+            test_expression(argument, TestValue::String("1".to_string()));
 
-                let argument = &call.arguments[1];
-                test_expression(
-                    argument,
-                    TestValue::Infix(InfixTestValue {
-                        left: Box::new(TestValue::String("2".to_string())),
-                        operator: "*".to_string(),
-                        right: Box::new(TestValue::String("3".to_string())),
-                    }),
-                );
+            let argument = &call.arguments[1];
+            test_expression(
+                argument,
+                TestValue::Infix(InfixTestValue {
+                    left: Box::new(TestValue::String("2".to_string())),
+                    operator: "*".to_string(),
+                    right: Box::new(TestValue::String("3".to_string())),
+                }),
+            );
 
-                let argument = &call.arguments[2];
-                test_expression(
-                    argument,
-                    TestValue::Infix(InfixTestValue {
-                        left: Box::new(TestValue::String("4".to_string())),
-                        operator: "+".to_string(),
-                        right: Box::new(TestValue::String("5".to_string())),
-                    }),
-                );
-            }
-            _ => panic!(),
-        },
+            let argument = &call.arguments[2];
+            test_expression(
+                argument,
+                TestValue::Infix(InfixTestValue {
+                    left: Box::new(TestValue::String("4".to_string())),
+                    operator: "+".to_string(),
+                    right: Box::new(TestValue::String("5".to_string())),
+                }),
+            );
+        }
         _ => panic!(),
     }
 }
@@ -280,24 +274,21 @@ fn test_function() {
     let statement = &program.statements[0];
 
     match statement {
-        Statement::Expression(expr) => match expr {
-            Expression::Function(fun) => {
-                assert_eq!(fun.token.token, Token::Function);
-                for (param, expected) in fun.parameters.iter().zip(exp_params) {
-                    assert_eq!(param.value, expected);
-                }
-
-                let statement = &fun.body.as_ref().unwrap().statements[0];
-
-                match statement {
-                    Statement::Expression(s) => {
-                        test_expression(&s, TestValue::String("a".to_string()));
-                    }
-                    _ => panic!(),
-                }
+        Statement::Expression(Expression::Function(fun)) => {
+            assert_eq!(fun.token.token, Token::Function);
+            for (param, expected) in fun.parameters.iter().zip(exp_params) {
+                assert_eq!(param.value, expected);
             }
-            _ => panic!(),
-        },
+
+            let statement = &fun.body.as_ref().unwrap().statements[0];
+
+            match statement {
+                Statement::Expression(s) => {
+                    test_expression(s, TestValue::String("a".to_string()));
+                }
+                _ => panic!(),
+            }
+        }
         _ => panic!(),
     }
 }
@@ -319,7 +310,7 @@ fn test_prefix_opertor() {
         match statement {
             Statement::Expression(s) => {
                 test_expression(
-                    &s,
+                    s,
                     TestValue::Prefix(PrefixTestValue {
                         operator: expected_prefix.to_string(),
                         right: Box::new(TestValue::String(expected_value.to_string())),
@@ -358,9 +349,9 @@ fn test_infix_opertor() {
         let statement = &program.statements[0];
 
         match statement {
-            Statement::Expression(s) => {
+            Statement::Expression(expression) => {
                 test_expression(
-                    &s,
+                    expression,
                     TestValue::Infix(InfixTestValue {
                         operator: operator.to_string(),
                         left: Box::new(TestValue::String(left.to_string())),
@@ -384,36 +375,33 @@ fn test_if_else_condition() {
 
     assert_eq!(program.statements.len(), 1);
     match &program.statements[0] {
-        Statement::Expression(stmt) => match stmt {
-            Expression::If(expr) => {
-                test_expression(
-                    expr.condition.as_ref(),
-                    TestValue::Infix(InfixTestValue {
-                        operator: "==".to_string(),
-                        left: Box::new(TestValue::String("a".to_string())),
-                        right: Box::new(TestValue::String("b".to_string())),
-                    }),
-                );
-                let statement = &expr.consequence.as_ref().unwrap().statements[0];
+        Statement::Expression(Expression::If(expr)) => {
+            test_expression(
+                expr.condition.as_ref(),
+                TestValue::Infix(InfixTestValue {
+                    operator: "==".to_string(),
+                    left: Box::new(TestValue::String("a".to_string())),
+                    right: Box::new(TestValue::String("b".to_string())),
+                }),
+            );
+            let statement = &expr.consequence.as_ref().unwrap().statements[0];
 
-                match statement {
-                    Statement::Expression(s) => {
-                        test_expression(&s, TestValue::String("y".to_string()));
-                    }
-                    _ => panic!(),
+            match statement {
+                Statement::Expression(s) => {
+                    test_expression(s, TestValue::String("y".to_string()));
                 }
-
-                let statement = &expr.alternative.as_ref().unwrap().statements[0];
-
-                match statement {
-                    Statement::Expression(s) => {
-                        test_expression(&s, TestValue::String("x".to_string()));
-                    }
-                    _ => panic!(),
-                }
+                _ => panic!(),
             }
-            _ => panic!(),
-        },
+
+            let statement = &expr.alternative.as_ref().unwrap().statements[0];
+
+            match statement {
+                Statement::Expression(s) => {
+                    test_expression(s, TestValue::String("x".to_string()));
+                }
+                _ => panic!(),
+            }
+        }
         _ => panic!(),
     }
 }
