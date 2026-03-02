@@ -33,6 +33,9 @@ pub fn repl_loop() {
             }
         };
 
-        println!("{}\n", obj.inspect())
+        match obj {
+            Some(v) => println!("{}\n", v.inspect()),
+            _ => continue,
+        }
     }
 }

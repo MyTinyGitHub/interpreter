@@ -126,6 +126,18 @@ impl Program {
     }
 }
 
+impl From<Expression> for Node {
+    fn from(expr: Expression) -> Self {
+        Node::Statement(Statement::Expression(expr))
+    }
+}
+
+impl From<BlockStatement> for Node {
+    fn from(expr: BlockStatement) -> Self {
+        Node::Statement(Statement::Block(expr))
+    }
+}
+
 impl Node {
     fn token_literal(&self) -> String {
         match self {

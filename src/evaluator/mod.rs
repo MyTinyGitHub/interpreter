@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, Node, Statement},
+    ast::{Expression, IfExpression, Node, Statement},
     error::MonkeyError,
 };
 
@@ -8,6 +8,7 @@ type ObjectType = String;
 #[cfg(test)]
 pub mod tests;
 
+#[derive(Debug)]
 pub enum Object {
     Integer(i64),
     Boolean(bool),
@@ -32,34 +33,67 @@ impl Object {
     }
 }
 
-pub fn eval(node: &Node) -> Result<Object, MonkeyError> {
-    match node {
-        Node::Program(prog) => eval_statements(&prog.statements),
+pub fn eval(node: &Node) -> Result<Option<Object>, MonkeyError> {
+    let result: Option<Object> = match node {
+        Node::Program(prog) => eval_statements(&prog.statements)?,
         Node::Statement(stmt) => match stmt {
             Statement::Expression(expr) => match expr {
-                Expression::IntegerLiteral(integer) => Ok(Object::Integer(integer.value)),
-                Expression::Boolean(boolean) => Ok(Object::Boolean(boolean.value)),
+                Expression::IntegerLiteral(integer) => Some(Object::Integer(integer.value)),
+                Expression::Boolean(boolean) => Some(Object::Boolean(boolean.value)),
                 Expression::Prefix(prefix) => {
                     let expression = *prefix.right.clone();
-                    let right = eval(&Node::Statement(Statement::Expression(expression)))?;
-                    eval_prefix(&prefix.operator, right)
+                    let right = eval_unwrap(expression)?;
+
+                    Some(eval_prefix(&prefix.operator, right)?)
                 }
                 Expression::Infix(infix) => {
-                    let right = eval(&Node::Statement(Statement::Expression(
-                        *infix.right.clone(),
-                    )))?;
-                    let left = eval(&Node::Statement(Statement::Expression(*infix.left.clone())))?;
-                    eval_infix(&infix.operator, left, right)
+                    let right = eval_unwrap(*infix.right.clone())?;
+                    let left = eval_unwrap(*infix.left.clone())?;
+
+                    Some(eval_infix(&infix.operator, left, right)?)
                 }
-                _ => Err(MonkeyError::Evaluator(
-                    "expression not covered yet".to_owned(),
-                )),
+                Expression::If(if_expr) => eval_if(if_expr)?,
+                _ => {
+                    return Err(MonkeyError::Evaluator(
+                        "expression not covered yet".to_owned(),
+                    ));
+                }
             },
-            _ => Err(MonkeyError::Evaluator(
-                "statement not covered yet".to_owned(),
-            )),
+            Statement::Block(block) => eval_statements(&block.statements)?,
+            _ => {
+                return Err(MonkeyError::Evaluator(
+                    "statement not covered yet".to_owned(),
+                ));
+            }
         },
+    };
+
+    Ok(result)
+}
+
+pub fn eval_if(expr: &IfExpression) -> Result<Option<Object>, MonkeyError> {
+    let cond = eval_unwrap(*expr.condition.clone())?;
+
+    if is_truthy(cond) {
+        eval(&Node::from(expr.consequence.clone()))
+    } else {
+        match &expr.alternative {
+            Some(alt) => eval(&Node::from(alt.clone())),
+            None => Ok(None),
+        }
     }
+}
+
+pub fn is_truthy(obj: Object) -> bool {
+    match obj {
+        Object::Boolean(b) => b,
+        _ => true,
+    }
+}
+
+pub fn eval_unwrap(expr: Expression) -> Result<Object, MonkeyError> {
+    eval(&Node::Statement(Statement::Expression(expr)))?
+        .ok_or_else(|| MonkeyError::Evaluator("value expected but not found".to_owned()))
 }
 
 pub fn eval_infix(operator: &str, left: Object, right: Object) -> Result<Object, MonkeyError> {
@@ -126,7 +160,7 @@ pub fn eval_minus_operator_expresion(object: Object) -> Result<Object, MonkeyErr
     match object {
         Object::Integer(value) => Ok(Object::Integer(-value)),
         _ => Err(MonkeyError::Evaluator(
-            "invalit minus prefix operator".to_owned(),
+            "invalid minus prefix operator".to_owned(),
         )),
     }
 }
@@ -138,8 +172,8 @@ pub fn eval_bang_operator_expresion(object: Object) -> Result<Object, MonkeyErro
     }
 }
 
-pub fn eval_statements(statements: &Vec<Statement>) -> Result<Object, MonkeyError> {
-    let mut result: Object = Object::Null;
+pub fn eval_statements(statements: &Vec<Statement>) -> Result<Option<Object>, MonkeyError> {
+    let mut result: Option<Object> = None;
 
     for statement in statements {
         result = eval(&Node::Statement(statement.clone()))?;

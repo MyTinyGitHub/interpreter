@@ -7,6 +7,29 @@ use crate::{
 };
 
 #[test]
+fn test_if_operator_eval() -> Result<(), MonkeyError> {
+    let inputs = [
+        "if (true) { 10 }",
+        "if (false) { 10 }",
+        "if (1) { 10 }",
+        "if (1 < 2) { 10 }",
+        "if (1 > 2) { 10 }",
+        "if (1 > 2) { 10 } else { 20 }",
+        "if (1 < 2) { 10 } else { 20 }",
+    ];
+
+    let expects = [Some(10), None, Some(10), Some(10), None, Some(20), Some(10)];
+
+    for (input, expectation) in inputs.iter().zip(expects) {
+        let object = test_eval(input)?;
+        println!("object: {:?}, expect: {:?}", object, expectation);
+        assert!(test_optional_integer_object(object, expectation));
+    }
+
+    Ok(())
+}
+
+#[test]
 fn test_integer_eval() -> Result<(), MonkeyError> {
     let inputs = [
         "5",
@@ -29,7 +52,8 @@ fn test_integer_eval() -> Result<(), MonkeyError> {
     let expects = [5, 10, -5, -10, 10, 32, 0, 20, 25, 0, 60, 30, 37, 37, 50];
 
     for (input, expectation) in inputs.iter().zip(expects) {
-        let object = test_eval(input)?;
+        let object = test_eval(input)?.unwrap();
+        println!("object: {:?}, expect: {}", object, expectation);
         assert!(test_integer_object(object, expectation));
     }
 
@@ -42,8 +66,8 @@ fn test_bang_operation_eval() -> Result<(), MonkeyError> {
     let expects = [false, true, false, true, false, true];
 
     for (input, expectation) in inputs.iter().zip(expects) {
-        println!("testing {}", input);
-        let object = test_eval(input)?;
+        let object = test_eval(input)?.unwrap();
+        println!("object: {:?}, expect: {}", object, expectation);
         assert!(test_boolean_object(object, expectation));
     }
 
@@ -80,14 +104,18 @@ fn test_boolean_eval() -> Result<(), MonkeyError> {
     ];
 
     for (input, expectation) in inputs.iter().zip(expects) {
-        let object = test_eval(input)?;
+        let object = test_eval(input)?.unwrap();
+        println!(
+            "input: {} object: {:?}, expect: {}",
+            input, object, expectation
+        );
         assert!(test_boolean_object(object, expectation));
     }
 
     Ok(())
 }
 
-fn test_eval(input: &str) -> Result<Object, MonkeyError> {
+fn test_eval(input: &str) -> Result<Option<Object>, MonkeyError> {
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program()?;
@@ -100,6 +128,13 @@ fn test_integer_object(object: Object, expect: i64) -> bool {
         Object::Integer(val) => val == expect,
         _ => false,
     }
+}
+
+fn test_optional_integer_object(object: Option<Object>, expect: Option<i64>) -> bool {
+    object.map(|v| match v {
+        Object::Integer(val) => val,
+        _ => panic!("not an integer"),
+    }) == expect
 }
 
 fn test_boolean_object(object: Object, expect: bool) -> bool {
