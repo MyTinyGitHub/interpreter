@@ -75,10 +75,10 @@ pub fn eval_if(expr: &IfExpression) -> Result<Option<Object>, MonkeyError> {
     let cond = eval_unwrap(*expr.condition.clone())?;
 
     if is_truthy(cond) {
-        eval(&Node::from(expr.consequence.clone()))
+        eval(&Node::block(expr.consequence.clone()))
     } else {
         match &expr.alternative {
-            Some(alt) => eval(&Node::from(alt.clone())),
+            Some(alt) => eval(&Node::block(alt.clone())),
             None => Ok(None),
         }
     }
@@ -92,7 +92,7 @@ pub fn is_truthy(obj: Object) -> bool {
 }
 
 pub fn eval_unwrap(expr: Expression) -> Result<Object, MonkeyError> {
-    eval(&Node::Statement(Statement::Expression(expr)))?
+    eval(&Node::statement(expr))?
         .ok_or_else(|| MonkeyError::Evaluator("value expected but not found".to_owned()))
 }
 
