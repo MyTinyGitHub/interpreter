@@ -75,6 +75,31 @@ fn test_bang_operation_eval() -> Result<(), MonkeyError> {
 }
 
 #[test]
+fn test_return() -> Result<(), MonkeyError> {
+    let inputs = [
+        "return 10;",
+        "return 10; 9;",
+        "return 2 * 5; 9;",
+        "9; return 2 * 5; 9;",
+    ];
+
+    let expected = [10, 10, 10, 10];
+
+    for (input, expectation) in inputs.iter().zip(expected) {
+        let object = test_eval(input)?.unwrap();
+
+        println!(
+            "input: {} object: {:?}, expect: {}",
+            input, object, expectation
+        );
+
+        assert!(test_integer_object(object, expectation));
+    }
+
+    Ok(())
+}
+
+#[test]
 fn test_boolean_eval() -> Result<(), MonkeyError> {
     let inputs = [
         "true",
@@ -105,10 +130,12 @@ fn test_boolean_eval() -> Result<(), MonkeyError> {
 
     for (input, expectation) in inputs.iter().zip(expects) {
         let object = test_eval(input)?.unwrap();
+
         println!(
             "input: {} object: {:?}, expect: {}",
             input, object, expectation
         );
+
         assert!(test_boolean_object(object, expectation));
     }
 

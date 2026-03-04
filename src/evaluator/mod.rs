@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, IfExpression, Node, Statement},
+    ast::{Expression, IfExpression, Node, ReturnStatement, Statement},
     error::MonkeyError,
 };
 
@@ -12,6 +12,7 @@ pub mod tests;
 pub enum Object {
     Integer(i64),
     Boolean(bool),
+    Return(Box<Object>),
     Null,
 }
 
@@ -20,6 +21,7 @@ impl Object {
         match self {
             Self::Integer(_) => "INTEGER".to_string(),
             Self::Boolean(_) => "BOOLEAN".to_string(),
+            Self::Return(_) => "RETURN_VALUE".to_string(),
             Self::Null => "NULL".to_string(),
         }
     }
@@ -28,6 +30,7 @@ impl Object {
         match self {
             Self::Integer(val) => val.to_string(),
             Self::Boolean(val) => val.to_string(),
+            Self::Return(val) => val.inspect(),
             Self::Null => "null".to_string(),
         }
     }
@@ -60,6 +63,7 @@ pub fn eval(node: &Node) -> Result<Option<Object>, MonkeyError> {
                 }
             },
             Statement::Block(block) => eval_statements(&block.statements)?,
+            Statement::Return(retrun_stmt) => eval(&Node::statement(retrun_stmt.value))?,
             _ => {
                 return Err(MonkeyError::Evaluator(
                     "statement not covered yet".to_owned(),
