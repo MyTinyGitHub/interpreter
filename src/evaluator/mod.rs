@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expression, IfExpression, Node, ReturnStatement, Statement},
+    ast::{BlockStatement, Expression, IfExpression, Node, Program, Statement},
     error::MonkeyError,
 };
 
@@ -38,7 +38,7 @@ impl Object {
 
 pub fn eval(node: &Node) -> Result<Option<Object>, MonkeyError> {
     let result: Option<Object> = match node {
-        Node::Program(prog) => eval_statements(&prog.statements)?,
+        Node::Program(prog) => eval_program(prog)?,
         Node::Statement(stmt) => match stmt {
             Statement::Expression(expr) => match expr {
                 Expression::IntegerLiteral(integer) => Some(Object::Integer(integer.value)),
@@ -62,8 +62,11 @@ pub fn eval(node: &Node) -> Result<Option<Object>, MonkeyError> {
                     ));
                 }
             },
-            Statement::Block(block) => eval_statements(&block.statements)?,
-            Statement::Return(retrun_stmt) => eval(&Node::statement(retrun_stmt.value))?,
+            Statement::Block(block) => eval_block_statements(block)?,
+            Statement::Return(retrun_stmt) => {
+                let expr = eval_unwrap(retrun_stmt.value.clone())?;
+                Some(Object::Return(Box::new(expr)))
+            }
             _ => {
                 return Err(MonkeyError::Evaluator(
                     "statement not covered yet".to_owned(),
@@ -176,11 +179,33 @@ pub fn eval_bang_operator_expresion(object: Object) -> Result<Object, MonkeyErro
     }
 }
 
-pub fn eval_statements(statements: &Vec<Statement>) -> Result<Option<Object>, MonkeyError> {
+pub fn eval_program(program: &Program) -> Result<Option<Object>, MonkeyError> {
     let mut result: Option<Object> = None;
 
-    for statement in statements {
+    for statement in program.statements.iter() {
         result = eval(&Node::Statement(statement.clone()))?;
+
+        if let Some(Object::Return(res)) = result {
+            return Ok(Some(*res));
+        }
+    }
+
+    Ok(result)
+}
+
+pub fn eval_block_statements(
+    block_statement: &BlockStatement,
+) -> Result<Option<Object>, MonkeyError> {
+    let mut result: Option<Object> = None;
+
+    for statement in block_statement.statements.iter() {
+        result = eval(&Node::Statement(statement.clone()))?;
+
+        println!("{:?}", result);
+
+        if let Some(Object::Return(_)) = result {
+            return Ok(result);
+        }
     }
 
     Ok(result)
