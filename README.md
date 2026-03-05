@@ -8,7 +8,7 @@ This interpreter isn't a detour — it's foundational to what I'm actually build
 
 Before writing a SQL query engine, I wanted to deeply understand what happens between raw text and meaningful computation. Building a lexer, parser, and evaluator from scratch for a simpler language first makes the database query layer much less intimidating — because the pipeline is identical: tokenize the input, parse it into an AST, evaluate it. Same architecture, different grammar.
 
-or the database project.
+I chose to implement it in Rust rather than Go for a second reason — the book's tree-walking evaluator exercises exactly the kinds of recursive, ownership-heavy patterns that I knew I'd need to get comfortable with for the database project.
 
 ## How This Connects to the Distributed SQL Database
 
