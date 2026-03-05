@@ -8,7 +8,7 @@ This interpreter isn't a detour — it's foundational to what I'm actually build
 
 Before writing a SQL query engine, I wanted to deeply understand what happens between raw text and meaningful computation. Building a lexer, parser, and evaluator from scratch for a simpler language first makes the database query layer much less intimidating — because the pipeline is identical: tokenize the input, parse it into an AST, evaluate it. Same architecture, different grammar.
 
-I chose to implement it in Rust rather than Go for a second reason — the book's tree-walking evaluator exercises exactly the kinds of recursive, ownership-heavy patterns that I knew I'd need to get comfortable with for the database project.
+or the database project.
 
 ## How This Connects to the Distributed SQL Database
 
@@ -81,12 +81,15 @@ Source Code (string)
 ```
 
 ### Lexer
+
 Scans raw source code character by character and produces a flat stream of tokens — keywords (`let`, `fn`, `if`), identifiers, literals, operators, delimiters. The lexer has no understanding of structure or meaning, only of what the individual pieces are.
 
 ### Parser
+
 Takes the token stream and builds an Abstract Syntax Tree — a tree structure that captures the grammatical relationships between tokens. I used a **Pratt parser** (top-down operator precedence parsing), which handles operator precedence elegantly without complex grammar rules. Each token type has an associated parsing function, and precedence is encoded as numeric values rather than grammar productions.
 
 ### Evaluator
+
 Walks the AST recursively and evaluates each node to produce a value. This is a **tree-walking interpreter** — the simplest and most readable evaluation strategy. No bytecode, no virtual machine, no compilation step. The tradeoff is performance, but for understanding how evaluation works it's the clearest possible approach.
 
 The evaluator maintains an **environment** — a map from identifiers to values — which is how variable bindings and closures work. When a function is defined, it captures its surrounding environment, which is what makes closures possible.
