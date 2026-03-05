@@ -1,5 +1,8 @@
+use core::error;
+use std::collections::HashMap;
+
 use crate::{
-    ast::{BlockStatement, Expression, IfExpression, Node, Program, Statement},
+    ast::{BlockStatement, Expression, Identifier, IfExpression, Node, Program, Statement},
     error::MonkeyError,
 };
 
@@ -8,12 +11,27 @@ type ObjectType = String;
 #[cfg(test)]
 pub mod tests;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Object {
     Integer(i64),
     Boolean(bool),
     Return(Box<Object>),
     Null,
+}
+
+#[derive(Debug, Default)]
+pub struct Environment {
+    store: HashMap<String, Object>,
+}
+
+impl Environment {
+    pub fn get(&self, value: &str) -> Option<&Object> {
+        self.store.get(value)
+    }
+
+    pub fn set(&mut self, value: &str, object: Object) {
+        self.store.insert(value.to_string(), object);
+    }
 }
 
 impl Object {
@@ -36,56 +54,71 @@ impl Object {
     }
 }
 
-pub fn eval(node: &Node) -> Result<Option<Object>, MonkeyError> {
+pub fn eval(node: &Node, env: &mut Environment) -> Result<Option<Object>, MonkeyError> {
     let result: Option<Object> = match node {
-        Node::Program(prog) => eval_program(prog)?,
+        Node::Program(prog) => eval_program(prog, env)?,
         Node::Statement(stmt) => match stmt {
             Statement::Expression(expr) => match expr {
+                Expression::Identifier(ident) => eval_identifier(ident, env)?,
                 Expression::IntegerLiteral(integer) => Some(Object::Integer(integer.value)),
                 Expression::Boolean(boolean) => Some(Object::Boolean(boolean.value)),
                 Expression::Prefix(prefix) => {
                     let expression = *prefix.right.clone();
-                    let right = eval_unwrap(expression)?;
+                    let right = eval_unwrap(expression, env)?;
 
                     Some(eval_prefix(&prefix.operator, right)?)
                 }
                 Expression::Infix(infix) => {
-                    let right = eval_unwrap(*infix.right.clone())?;
-                    let left = eval_unwrap(*infix.left.clone())?;
+                    let right = eval_unwrap(*infix.right.clone(), env)?;
+                    let left = eval_unwrap(*infix.left.clone(), env)?;
 
                     Some(eval_infix(&infix.operator, left, right)?)
                 }
-                Expression::If(if_expr) => eval_if(if_expr)?,
+                Expression::If(if_expr) => eval_if(if_expr, env)?,
                 _ => {
                     return Err(MonkeyError::Evaluator(
                         "expression not covered yet".to_owned(),
                     ));
                 }
             },
-            Statement::Block(block) => eval_block_statements(block)?,
+            Statement::Block(block) => eval_block_statements(block, env)?,
             Statement::Return(retrun_stmt) => {
-                let expr = eval_unwrap(retrun_stmt.value.clone())?;
+                let expr = eval_unwrap(retrun_stmt.value.clone(), env)?;
                 Some(Object::Return(Box::new(expr)))
             }
-            _ => {
-                return Err(MonkeyError::Evaluator(
-                    "statement not covered yet".to_owned(),
-                ));
+            Statement::Let(let_stmt) => {
+                let value = eval(&Node::statement(let_stmt.value.clone()), env)?;
+                env.set(&let_stmt.name.value, value.clone().unwrap());
+                value
             }
         },
     };
 
     Ok(result)
 }
+pub fn eval_identifier(
+    ident: &Identifier,
+    env: &Environment,
+) -> Result<Option<Object>, MonkeyError> {
+    let val = env.get(&ident.value);
 
-pub fn eval_if(expr: &IfExpression) -> Result<Option<Object>, MonkeyError> {
-    let cond = eval_unwrap(*expr.condition.clone())?;
+    match val {
+        Some(val) => Ok(Some(val.clone())),
+        None => {
+            let error_msg = format!("identifier not found: {}", ident.value);
+            Err(MonkeyError::Evaluator(error_msg))
+        }
+    }
+}
+
+pub fn eval_if(expr: &IfExpression, env: &mut Environment) -> Result<Option<Object>, MonkeyError> {
+    let cond = eval_unwrap(*expr.condition.clone(), env)?;
 
     if is_truthy(cond) {
-        eval(&Node::block(expr.consequence.clone()))
+        eval(&Node::block(expr.consequence.clone()), env)
     } else {
         match &expr.alternative {
-            Some(alt) => eval(&Node::block(alt.clone())),
+            Some(alt) => eval(&Node::block(alt.clone()), env),
             None => Ok(None),
         }
     }
@@ -98,8 +131,8 @@ pub fn is_truthy(obj: Object) -> bool {
     }
 }
 
-pub fn eval_unwrap(expr: Expression) -> Result<Object, MonkeyError> {
-    eval(&Node::statement(expr))?
+pub fn eval_unwrap(expr: Expression, env: &mut Environment) -> Result<Object, MonkeyError> {
+    eval(&Node::statement(expr), env)?
         .ok_or_else(|| MonkeyError::Evaluator("value expected but not found".to_owned()))
 }
 
@@ -178,11 +211,14 @@ pub fn eval_bang_operator_expresion(object: Object) -> Result<Object, MonkeyErro
     }
 }
 
-pub fn eval_program(program: &Program) -> Result<Option<Object>, MonkeyError> {
+pub fn eval_program(
+    program: &Program,
+    env: &mut Environment,
+) -> Result<Option<Object>, MonkeyError> {
     let mut result: Option<Object> = None;
 
     for statement in program.statements.iter() {
-        result = eval(&Node::Statement(statement.clone()))?;
+        result = eval(&Node::Statement(statement.clone()), env)?;
 
         if let Some(Object::Return(res)) = result {
             return Ok(Some(*res));
@@ -194,11 +230,12 @@ pub fn eval_program(program: &Program) -> Result<Option<Object>, MonkeyError> {
 
 pub fn eval_block_statements(
     block_statement: &BlockStatement,
+    env: &mut Environment,
 ) -> Result<Option<Object>, MonkeyError> {
     let mut result: Option<Object> = None;
 
     for statement in block_statement.statements.iter() {
-        result = eval(&Node::Statement(statement.clone()))?;
+        result = eval(&Node::Statement(statement.clone()), env)?;
 
         println!("{:?}", result);
 

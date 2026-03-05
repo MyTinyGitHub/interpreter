@@ -1,8 +1,15 @@
 use std::io;
 
-use crate::{ast::Node, evaluator::eval, lexer::Lexer, parser::Parser};
+use crate::{
+    ast::Node,
+    evaluator::{Environment, eval},
+    lexer::Lexer,
+    parser::Parser,
+};
 
 pub fn repl_loop() {
+    let mut env = Environment::default();
+
     loop {
         let mut input: String = String::new();
 
@@ -25,7 +32,7 @@ pub fn repl_loop() {
             }
         };
 
-        let obj = match eval(&Node::Program(program)) {
+        let obj = match eval(&Node::Program(program), &mut env) {
             Ok(obj) => obj,
             Err(error) => {
                 println!("{}", error);

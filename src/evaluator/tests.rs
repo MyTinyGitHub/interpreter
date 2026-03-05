@@ -3,7 +3,7 @@ use std::{fmt::format, result};
 use crate::{
     ast::Node,
     error::MonkeyError,
-    evaluator::{Object, eval},
+    evaluator::{Environment, Object, eval},
     lexer::Lexer,
     parser::Parser,
 };
@@ -55,7 +55,6 @@ fn test_integer_eval() -> Result<(), MonkeyError> {
 
     for (input, expectation) in inputs.iter().zip(expects) {
         let object = test_eval(input)?.unwrap();
-        println!("object: {:?}, expect: {}", object, expectation);
         assert!(test_integer_object(object, expectation));
     }
 
@@ -102,9 +101,29 @@ fn test_return() -> Result<(), MonkeyError> {
 }
 
 #[test]
+fn environment_test() -> Result<(), MonkeyError> {
+    let inputs = [
+        "let a = 6; a;",
+        "let a = 5 * 5; a;",
+        "let a = 5; let b = a; b;",
+        "let a = 5; let b = a; let c = a + b + 5; c;",
+    ];
+
+    let expectation = [6, 25, 5, 15];
+
+    for (input, expect) in inputs.iter().zip(expectation) {
+        let result = test_eval(input)?.unwrap();
+
+        assert!(test_integer_object(result, expect));
+    }
+
+    Ok(())
+}
+#[test]
 fn error_handling_test() {
     let inputs = [
         "5 + true;",
+        "foobar",
         "5 + true; 5;",
         "-true",
         "true + false;",
@@ -120,6 +139,7 @@ fn error_handling_test() {
 
     let expectations = [
         "type mismatch: INTEGER + BOOLEAN",
+        "identifier not found: foobar",
         "type mismatch: INTEGER + BOOLEAN",
         "unknown operator: -BOOLEAN",
         "unknown operator: BOOLEAN + BOOLEAN",
@@ -184,8 +204,9 @@ fn test_eval(input: &str) -> Result<Option<Object>, MonkeyError> {
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program()?;
+    let mut env = Environment::default();
 
-    eval(&Node::Program(program))
+    eval(&Node::Program(program), &mut env)
 }
 
 fn test_integer_object(object: Object, expect: i64) -> bool {
