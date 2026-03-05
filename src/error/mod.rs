@@ -6,6 +6,6 @@ pub enum MonkeyError {
     Lexer(String),
     #[error("parser: {0}")]
     Parser(String),
-    #[error("evaluator: {0}")]
+    #[error("{0}")]
     Evaluator(String),
 }

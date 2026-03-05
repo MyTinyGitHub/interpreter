@@ -1,3 +1,5 @@
+use std::{fmt::format, result};
+
 use crate::{
     ast::Node,
     error::MonkeyError,
@@ -97,6 +99,41 @@ fn test_return() -> Result<(), MonkeyError> {
     }
 
     Ok(())
+}
+
+#[test]
+fn error_handling_test() {
+    let inputs = [
+        "5 + true;",
+        "5 + true; 5;",
+        "-true",
+        "true + false;",
+        "5; true + false; 5",
+        "if (10 > 1) { true + false; }",
+        r#"if (10 > 1) {
+            if (10 > 1) {
+                return true + false;
+            }
+        return 1;
+        }"#,
+    ];
+
+    let expectations = [
+        "type mismatch: INTEGER + BOOLEAN",
+        "type mismatch: INTEGER + BOOLEAN",
+        "unknown operator: -BOOLEAN",
+        "unknown operator: BOOLEAN + BOOLEAN",
+        "unknown operator: BOOLEAN + BOOLEAN",
+        "unknown operator: BOOLEAN + BOOLEAN",
+    ];
+
+    for (input, expect) in inputs.iter().zip(expectations) {
+        let result = test_eval(input);
+
+        let error = format!("{}", result.err().unwrap());
+
+        assert_eq!(error, expect);
+    }
 }
 
 #[test]

@@ -104,13 +104,12 @@ pub fn eval_unwrap(expr: Expression) -> Result<Object, MonkeyError> {
 }
 
 pub fn eval_infix(operator: &str, left: Object, right: Object) -> Result<Object, MonkeyError> {
-    let result = match (left, right) {
-        (Object::Integer(l), Object::Integer(r)) => eval_integer_infix(operator, l, r)?,
-        (Object::Boolean(l), Object::Boolean(r)) => eval_boolean_infix(operator, l, r)?,
+    let result = match (&left, &right) {
+        (Object::Integer(l), Object::Integer(r)) => eval_integer_infix(operator, *l, *r)?,
+        (Object::Boolean(l), Object::Boolean(r)) => eval_boolean_infix(operator, *l, *r)?,
         _ => {
-            return Err(MonkeyError::Evaluator(
-                "incompatible infix objects".to_owned(),
-            ));
+            let error_msg = format!("type mismatch: {} + {}", left.obj_type(), right.obj_type());
+            return Err(MonkeyError::Evaluator(error_msg));
         }
     };
 
@@ -122,9 +121,8 @@ pub fn eval_boolean_infix(operator: &str, left: bool, right: bool) -> Result<Obj
         "==" => Object::Boolean(left == right),
         "!=" => Object::Boolean(left != right),
         _ => {
-            return Err(MonkeyError::Evaluator(
-                "invalid boolean infix operator".to_owned(),
-            ));
+            let error_msg = format!("unknown operator: BOOLEAN {} BOOLEAN", operator);
+            return Err(MonkeyError::Evaluator(error_msg));
         }
     };
 
@@ -166,9 +164,10 @@ pub fn eval_prefix(operator: &str, object: Object) -> Result<Object, MonkeyError
 pub fn eval_minus_operator_expresion(object: Object) -> Result<Object, MonkeyError> {
     match object {
         Object::Integer(value) => Ok(Object::Integer(-value)),
-        _ => Err(MonkeyError::Evaluator(
-            "invalid minus prefix operator".to_owned(),
-        )),
+        _ => {
+            let error_msg = format!("unknown operator: -{}", object.obj_type());
+            Err(MonkeyError::Evaluator(error_msg))
+        }
     }
 }
 
