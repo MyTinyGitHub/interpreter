@@ -121,11 +121,12 @@ fn test_boolean_eval() -> Result<(), MonkeyError> {
         "(1 < 2) == false",
         "(1 > 2) == true",
         "(1 > 2) == false",
+        "(5 > 5) == false",
     ];
 
     let expects = [
         true, false, true, false, false, false, true, false, false, true, true, true, false, true,
-        true, true, false, false, true,
+        true, true, false, false, true, true,
     ];
 
     for (input, expectation) in inputs.iter().zip(expects) {
