@@ -261,16 +261,12 @@ impl BlockStatement {
         self.token.value.clone().to_string()
     }
 
-    fn string(&self) -> String {
-        format!(
-            "{} {};",
-            self.token_literal(),
-            self.statements
-                .iter()
-                .map(|v| v.string())
-                .collect::<Vec<String>>()
-                .join("")
-        )
+    pub fn string(&self) -> String {
+        self.statements
+            .iter()
+            .map(|v| v.string())
+            .collect::<Vec<String>>()
+            .join("")
     }
 }
 

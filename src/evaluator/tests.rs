@@ -3,7 +3,7 @@ use std::{fmt::format, result};
 use crate::{
     ast::Node,
     error::MonkeyError,
-    evaluator::{Environment, Object, eval},
+    evaluator::{Environment, Function, Object, eval},
     lexer::Lexer,
     parser::Parser,
 };
@@ -119,6 +119,58 @@ fn environment_test() -> Result<(), MonkeyError> {
 
     Ok(())
 }
+
+#[test]
+fn test_closure() -> Result<(), MonkeyError> {
+    let input = r#"
+        let newAdder = fn(x) {
+            fn(y) { x + y };
+        };
+        let addTwo = newAdder(2);
+        addTwo(2);
+    "#;
+
+    assert!(test_integer_object(test_eval(input)?.unwrap(), 4));
+    Ok(())
+}
+#[test]
+fn test_function() -> Result<(), MonkeyError> {
+    let inputs = [
+        "let identity = fn(x) { x; }; identity(5);",
+        "let identity = fn(x) { return x; }; identity(5);",
+        "let double = fn(x) { x * 2; }; double(5);",
+        "let add = fn(x, y) { x + y; }; add(5, 5);",
+        "let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));",
+        "fn(x) { x; }(5)",
+    ];
+
+    let expectations = [5, 5, 10, 10, 20, 5];
+
+    for (input, expect) in inputs.iter().zip(expectations) {
+        let result = test_eval(input)?;
+
+        assert!(test_integer_object(result.unwrap(), expect));
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_function_object() -> Result<(), MonkeyError> {
+    let input = "fn(x) { x + 2; }";
+    let eval = test_eval(input)?;
+
+    match eval {
+        Some(Object::Function(func)) => {
+            assert_eq!(func.parameters.len(), 1);
+            assert_eq!(func.parameters[0].value, "x");
+            assert_eq!(func.body.string(), "(x + 2)");
+            Ok(())
+        }
+        _ => panic!("Expected a function"),
+    }
+}
+
 #[test]
 fn error_handling_test() {
     let inputs = [
@@ -188,11 +240,6 @@ fn test_boolean_eval() -> Result<(), MonkeyError> {
 
     for (input, expectation) in inputs.iter().zip(expects) {
         let object = test_eval(input)?.unwrap();
-
-        println!(
-            "input: {} object: {:?}, expect: {}",
-            input, object, expectation
-        );
 
         assert!(test_boolean_object(object, expectation));
     }
