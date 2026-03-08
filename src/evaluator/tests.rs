@@ -22,7 +22,7 @@ fn test_if_operator_eval() -> Result<(), MonkeyError> {
 
     for (input, expectation) in inputs.iter().zip(expects) {
         let object = test_eval(input)?;
-        println!("object: {:?}, expect: {:?}", object, expectation);
+
         assert!(test_optional_integer_object(object, expectation));
     }
 
@@ -66,7 +66,7 @@ fn test_bang_operation_eval() -> Result<(), MonkeyError> {
 
     for (input, expectation) in inputs.iter().zip(expects) {
         let object = test_eval(input)?.unwrap();
-        println!("object: {:?}, expect: {}", object, expectation);
+
         assert!(test_boolean_object(object, expectation));
     }
 
@@ -86,11 +86,6 @@ fn test_return() -> Result<(), MonkeyError> {
 
     for (input, expectation) in inputs.iter().zip(expected) {
         let object = test_eval(input)?.unwrap();
-
-        println!(
-            "input: {} object: {:?}, expect: {}",
-            input, object, expectation
-        );
 
         assert!(test_integer_object(object, expectation));
     }
