@@ -16,7 +16,7 @@
 //!
 //! Typing "exit" terminates the REPL.
 
-use std::io;
+use std::{cell::RefCell, io, rc::Rc};
 
 use crate::{
     ast::Node,
@@ -26,7 +26,7 @@ use crate::{
 };
 
 pub fn repl_loop() {
-    let mut env = Environment::default();
+    let env = Rc::new(RefCell::new(Environment::default()));
 
     loop {
         let mut input: String = String::new();
@@ -50,7 +50,7 @@ pub fn repl_loop() {
             }
         };
 
-        let obj = match eval(&Node::Program(program), &mut env) {
+        let obj = match eval(&Node::Program(program), &env) {
             Ok(obj) => obj,
             Err(error) => {
                 println!("{}", error);

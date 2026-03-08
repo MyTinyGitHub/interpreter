@@ -15,11 +15,13 @@
 //!
 //! Only `false` is falsy. All other values (including `0` and `null`) are truthy.
 
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     ast::{BlockStatement, Expression, Identifier, IfExpression, Node, Program, Statement},
     error::MonkeyError,
     evaluator::{
-        environment::Environment,
+        environment::{Environment, extend_func_env},
         object::{Function, Object},
     },
 };
@@ -46,7 +48,7 @@ pub mod tests;
 /// - `Ok(Some(Object))`: A value was produced
 /// - `Ok(None)`: No value produced (e.g., empty program)
 /// - `Err(MonkeyError)`: An error occurred (type mismatch, unknown operator, etc.)
-pub fn eval(node: &Node, env: &mut Environment) -> Result<Option<Object>, MonkeyError> {
+pub fn eval(node: &Node, env: &Rc<RefCell<Environment>>) -> Result<Option<Object>, MonkeyError> {
     let result: Option<Object> = match node {
         Node::Program(prog) => eval_program(prog, env)?,
         Node::Statement(stmt) => match stmt {
@@ -70,7 +72,7 @@ pub fn eval(node: &Node, env: &mut Environment) -> Result<Option<Object>, Monkey
                 Expression::Function(func) => Some(Object::Function(Function {
                     parameters: func.parameters.clone(),
                     body: func.body.clone(),
-                    env: env.clone(),
+                    env: Rc::clone(env),
                 })),
                 Expression::Call(call) => {
                     let func = eval_unwrap(*call.function.clone(), env)?;
@@ -88,7 +90,8 @@ pub fn eval(node: &Node, env: &mut Environment) -> Result<Option<Object>, Monkey
             Statement::Let(let_stmt) => {
                 let value = eval(&Node::statement(let_stmt.value.clone()), env)?;
                 if let Some(val) = &value {
-                    env.set(let_stmt.name.token.literal(), val.clone());
+                    env.borrow_mut()
+                        .set(let_stmt.name.token.literal(), val.clone());
                 }
                 value
             }
@@ -109,15 +112,15 @@ pub fn apply_function(object: Object, args: Vec<Object>) -> Result<Option<Object
         }
     };
 
-    let mut extended_env = func.env.extend_func_env(&func, args);
-    let evaluated = eval(&Node::block(func.body.clone()), &mut extended_env)?;
+    let extended_env = extend_func_env(&func, args);
+    let evaluated = eval(&Node::block(func.body.clone()), &extended_env)?;
 
     Ok(evaluated)
 }
 
 pub fn eval_expressions(
     exprs: Vec<Expression>,
-    env: &mut Environment,
+    env: &Rc<RefCell<Environment>>,
 ) -> Result<Vec<Object>, MonkeyError> {
     let mut result = vec![];
 
@@ -133,12 +136,12 @@ pub fn eval_expressions(
 
 pub fn eval_identifier(
     ident: &Identifier,
-    env: &Environment,
+    env: &Rc<RefCell<Environment>>,
 ) -> Result<Option<Object>, MonkeyError> {
-    let val = env.get(ident.token.literal());
+    let val = env.borrow().get(ident.token.literal());
 
     match val {
-        Some(val) => Ok(Some(val.clone())),
+        Some(val) => Ok(Some(val)),
         None => {
             let error_msg = format!("identifier not found: {}", ident.token.literal());
             Err(MonkeyError::Evaluator(error_msg))
@@ -146,7 +149,10 @@ pub fn eval_identifier(
     }
 }
 
-pub fn eval_if(expr: &IfExpression, env: &mut Environment) -> Result<Option<Object>, MonkeyError> {
+pub fn eval_if(
+    expr: &IfExpression,
+    env: &Rc<RefCell<Environment>>,
+) -> Result<Option<Object>, MonkeyError> {
     let cond = eval_unwrap(*expr.condition.clone(), env)?;
 
     if is_truthy(cond) {
@@ -166,7 +172,10 @@ pub fn is_truthy(obj: Object) -> bool {
     }
 }
 
-pub fn eval_unwrap(expr: Expression, env: &mut Environment) -> Result<Object, MonkeyError> {
+pub fn eval_unwrap(
+    expr: Expression,
+    env: &Rc<RefCell<Environment>>,
+) -> Result<Object, MonkeyError> {
     eval(&Node::statement(expr), env)?
         .ok_or_else(|| MonkeyError::Evaluator("value expected but not found".to_owned()))
 }
@@ -248,7 +257,7 @@ pub fn eval_bang_operator_expresion(object: Object) -> Result<Object, MonkeyErro
 
 pub fn eval_program(
     program: &Program,
-    env: &mut Environment,
+    env: &Rc<RefCell<Environment>>,
 ) -> Result<Option<Object>, MonkeyError> {
     let mut result: Option<Object> = None;
 
@@ -265,7 +274,7 @@ pub fn eval_program(
 
 pub fn eval_block_statements(
     block_statement: &BlockStatement,
-    env: &mut Environment,
+    env: &Rc<RefCell<Environment>>,
 ) -> Result<Option<Object>, MonkeyError> {
     let mut result: Option<Object> = None;
 

@@ -11,6 +11,8 @@
 //! - `Return`: Wrapper for return values (separates return from its value)
 //! - `Function`: First-class function with parameters, body, and captured environment
 
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     ast::{BlockStatement, Identifier},
     evaluator::environment::Environment,
@@ -22,7 +24,7 @@ type ObjectType = String;
 pub struct Function {
     pub parameters: Vec<Identifier>,
     pub body: BlockStatement,
-    pub env: Environment,
+    pub env: Rc<RefCell<Environment>>,
 }
 
 #[derive(Debug, Clone)]

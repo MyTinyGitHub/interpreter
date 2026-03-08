@@ -11,41 +11,42 @@
 //!
 //! This ensures functions "remember" where they were defined, not where they're called.
 
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::evaluator::object::{Function, Object};
 
 #[derive(Debug, Default, Clone)]
 pub struct Environment {
     store: HashMap<String, Object>,
-    outer: Option<Box<Environment>>,
+    outer: Option<Rc<RefCell<Environment>>>,
 }
 
 impl Environment {
-    pub fn new_enclosed(env: &Environment) -> Self {
+    pub fn new_enclosed(env: Rc<RefCell<Environment>>) -> Self {
         Self {
             store: HashMap::default(),
-            outer: Some(Box::new(env.clone())),
+            outer: Some(env),
         }
     }
 
-    pub fn get(&self, value: &str) -> Option<&Object> {
+    pub fn get(&self, value: &str) -> Option<Object> {
         self.store
             .get(value)
-            .or_else(|| self.outer.as_ref()?.get(value))
+            .cloned()
+            .or_else(|| self.outer.as_ref()?.borrow().get(value))
     }
 
     pub fn set(&mut self, value: &str, object: Object) {
         self.store.insert(value.to_string(), object);
     }
+}
 
-    pub fn extend_func_env(&self, func: &Function, args: Vec<Object>) -> Environment {
-        let mut extended = Environment::new_enclosed(self);
+pub fn extend_func_env(func: &Function, args: Vec<Object>) -> Rc<RefCell<Environment>> {
+    let mut extended = Environment::new_enclosed(Rc::clone(&func.env));
 
-        for (parameter, arg) in func.parameters.iter().zip(args) {
-            extended.set(parameter.token.literal(), arg);
-        }
-
-        extended
+    for (parameter, arg) in func.parameters.iter().zip(args) {
+        extended.set(parameter.token.literal(), arg);
     }
+
+    Rc::new(RefCell::new(extended))
 }

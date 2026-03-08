@@ -1,7 +1,9 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     ast::Node,
     error::MonkeyError,
-    evaluator::{eval, Environment, Object},
+    evaluator::{Environment, Object, eval},
     lexer::Lexer,
     parser::Parser,
 };
@@ -245,9 +247,9 @@ fn test_eval(input: &str) -> Result<Option<Object>, MonkeyError> {
     let lexer = Lexer::new(input);
     let mut parser = Parser::new(lexer);
     let program = parser.parse_program()?;
-    let mut env = Environment::default();
+    let env = Environment::default();
 
-    eval(&Node::Program(program), &mut env)
+    eval(&Node::Program(program), &Rc::new(RefCell::new(env)))
 }
 
 fn test_integer_object(object: Object, expect: i64) -> bool {
