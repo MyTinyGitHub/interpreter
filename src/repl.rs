@@ -1,3 +1,21 @@
+//! Read-Eval-Print Loop for the Monkey interpreter.
+//!
+//! Provides an interactive REPL that reads user input, passes it through
+//! the lexer→parser→evaluator pipeline, and prints the result. The environment
+//! is shared across REPL sessions, so variables persist between commands.
+//!
+//! # Flow
+//!
+//! 1. Read a line of input from stdin
+//! 2. Lex the input into tokens
+//! 3. Parse tokens into an AST
+//! 4. Evaluate the AST in the shared environment
+//! 5. Print the resulting object (or error)
+//!
+//! # Exit
+//!
+//! Typing "exit" terminates the REPL.
+
 use std::io;
 
 use crate::{

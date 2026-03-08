@@ -1,3 +1,16 @@
+//! Environment for variable bindings and closures.
+//!
+//! Maps variable names to values and implements lexical scoping.
+//! The `outer` field enables closures by capturing the defining scope.
+//!
+//! # How Closures Work
+//!
+//! 1. When a function is defined, it captures the current environment
+//! 2. When called, a new environment is created that encloses the captured one
+//! 3. Variable lookup checks local scope first, then chains outward
+//!
+//! This ensures functions "remember" where they were defined, not where they're called.
+
 use std::collections::HashMap;
 
 use crate::evaluator::object::{Function, Object};

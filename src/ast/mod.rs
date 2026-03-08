@@ -1,3 +1,16 @@
+//! Abstract Syntax Tree node definitions.
+//!
+//! Defines all AST nodes representing parsed Monkey code. The tree structure
+//! captures grammatical relationships between language constructs.
+//!
+//! # Node Types
+//!
+//! - `Program`: Root node containing all statements
+//! - `Statement`: Executable constructs (Let, Return, Block, Expression)
+//! - `Expression`: Value-producing constructs (Identifier, Literal, Operation, etc.)
+//!
+//! Each node implements `string()` for debugging and REPL feedback.
+
 use crate::token::Token;
 
 #[cfg(test)]

@@ -1,3 +1,20 @@
+//! Lexical analyzer for the Monkey language.
+//!
+//! Scans source code character-by-character and produces a stream of tokens.
+//! Uses a two-pointer technique for one-character lookahead to distinguish
+//! operators like `=` from `==`.
+//!
+//! # Key Types
+//!
+//! - `Lexer`: Main lexer struct with input buffer and position tracking
+//! - `TOKEN_MAP`: Static map of keywords to their token variants
+//!
+//! # Design Decisions
+//!
+//! - Uses `Vec<u8>` instead of `&str` for O(1) indexing (Monkey is ASCII-only)
+//! - Static keyword map for O(1) keyword lookup
+//! - Returns `Token::Illegal` for unrecognized characters
+
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
@@ -6,6 +23,10 @@ use crate::token::Token;
 #[cfg(test)]
 pub mod tests;
 
+/// Lexical analyzer that tokenizes Monkey source code.
+///
+/// Uses two positions (`position` and `read_position`) to implement lookahead.
+/// The `ch` field holds the current character being processed.
 pub struct Lexer {
     input: Vec<u8>,
     position: usize,
@@ -26,6 +47,9 @@ static TOKEN_MAP: LazyLock<HashMap<&'static str, Token>> = LazyLock::new(|| {
 });
 
 impl Lexer {
+    /// Creates a new Lexer from source code.
+    ///
+    /// Initializes position to 0 and reads the first character.
     pub fn new(input: &str) -> Self {
         let mut result = Self {
             input: input.as_bytes().to_owned(),

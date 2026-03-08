@@ -1,3 +1,16 @@
+//! Runtime object types for the Monkey interpreter.
+//!
+//! Defines the value types that the evaluator works with. These are the
+//! "objects" that variables hold and expressions evaluate to.
+//!
+//! # Types
+//!
+//! - `Integer`: 64-bit signed integer
+//! - `Boolean`: True or false
+//! - `Null`: Represents "no value"
+//! - `Return`: Wrapper for return values (separates return from its value)
+//! - `Function`: First-class function with parameters, body, and captured environment
+
 use crate::{
     ast::{BlockStatement, Identifier},
     evaluator::environment::Environment,

@@ -1,3 +1,22 @@
+//! Pratt parser that builds an AST from tokens.
+//!
+//! Uses top-down operator precedence parsing (Pratt parsing) instead of
+//! traditional grammar-based parsing. Each token type has associated
+//! parser functions for prefix (unary) and infix (binary) positions.
+//!
+//! # How It Works
+//!
+//! 1. `parse_program()` iterates through statements
+//! 2. `parse_expresion()` uses prefix parsers for the left side
+//! 3. It then checks if the next token has higher precedence—if so,
+//!    use an infix parser to handle the operator
+//! 4. Repeat until precedence drops below threshold
+//!
+//! # Registered Parsers
+//!
+//! - Prefix: identifiers, integers, booleans, prefix operators, `if`, `fn`
+//! - Infix: arithmetic, comparison, function calls
+
 use std::collections::HashMap;
 
 use crate::{
@@ -26,6 +45,11 @@ pub struct Parser {
 }
 
 impl Parser {
+    /// Creates a new Parser and registers all prefix/infix parsers.
+    ///
+    /// This is where the magic happens: we register parsing functions
+    /// for each token type. The parser uses these at runtime to handle
+    /// different syntactic constructs.
     pub fn new(lexer: Lexer) -> Self {
         let mut result = Self {
             lexer,
@@ -429,6 +453,10 @@ impl Parser {
         Ok(Statement::Let(LetStatement { token, name, value }))
     }
 
+    /// Parses the complete token stream into a Program.
+    ///
+    /// Iterates through all tokens, parsing each statement until EOF.
+    /// Returns a Program containing all statements.
     pub fn parse_program(&mut self) -> Result<Program, MonkeyError> {
         let mut program = Program::default();
 

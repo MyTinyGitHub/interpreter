@@ -1,3 +1,12 @@
+//! Error types for the Monkey interpreter.
+//!
+//! All errors in the pipeline flow through this enum. Each variant
+//! represents an error from a specific stage:
+//!
+//! - `Lexer`: Tokenization failures
+//! - `Parser`: Syntactic errors (unexpected tokens, etc.)
+//! - `Evaluator`: Runtime errors (unknown operators, undefined identifiers)
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]

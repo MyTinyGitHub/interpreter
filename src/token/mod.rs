@@ -1,3 +1,19 @@
+//! Token types and precedence levels for the Monkey language.
+//!
+//! Defines all syntactic elements of Monkey and their operator precedence
+//! for the Pratt parser.
+//!
+//! # Precedence Levels
+//!
+//! Higher values indicate tighter binding:
+//! - `Call` (7): Function calls `foo()`
+//! - `Prefix` (6): Unary operators `-x`, `!x`
+//! - `Product` (5): `*`, `/`
+//! - `Sum` (4): `+`, `-`
+//! - `Lessgreater` (3): `<`, `>`
+//! - `Equals` (2): `==`, `!=`
+//! - `Lowest` (1): Everything else
+
 use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

@@ -1,3 +1,20 @@
+//! Tree-walking evaluator for the Monkey language.
+//!
+//! Recursively walks the AST and computes values. This is a naive interpreter—
+//! no bytecode, no JIT, no compilation. Each AST node has a corresponding
+//! evaluation function.
+//!
+//! # Evaluation Flow
+//!
+//! 1. `eval()` dispatches on node type
+//! 2. For expressions: evaluate sub-expressions, apply operations
+//! 3. For statements: evaluate in sequence, handle return/let specially
+//! 4. Environment provides variable bindings
+//!
+//! # Truthiness
+//!
+//! Only `false` is falsy. All other values (including `0` and `null`) are truthy.
+
 use crate::{
     ast::{BlockStatement, Expression, Identifier, IfExpression, Node, Program, Statement},
     error::MonkeyError,
@@ -13,6 +30,22 @@ pub mod object;
 #[cfg(test)]
 pub mod tests;
 
+/// Evaluates an AST node and returns the resulting Object.
+///
+/// This is the main entry point for evaluation. It pattern matches on the
+/// node type and dispatches to specialized evaluation functions:
+/// - `Program` → `eval_program`
+/// - `Statement` → statement-specific evaluation
+/// - `Expression` → expression-specific evaluation
+///
+/// # Arguments
+/// - `node`: The AST node to evaluate
+/// - `env`: Mutable reference to the environment (for variable bindings)
+///
+/// # Returns
+/// - `Ok(Some(Object))`: A value was produced
+/// - `Ok(None)`: No value produced (e.g., empty program)
+/// - `Err(MonkeyError)`: An error occurred (type mismatch, unknown operator, etc.)
 pub fn eval(node: &Node, env: &mut Environment) -> Result<Option<Object>, MonkeyError> {
     let result: Option<Object> = match node {
         Node::Program(prog) => eval_program(prog, env)?,

@@ -1,7 +1,7 @@
 use crate::{
     ast::Node,
     error::MonkeyError,
-    evaluator::{Environment, Object, eval},
+    evaluator::{eval, Environment, Object},
     lexer::Lexer,
     parser::Parser,
 };
