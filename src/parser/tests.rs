@@ -67,7 +67,7 @@ fn test_let_statements() -> Result<(), MonkeyError> {
         match statement {
             Statement::Let(s) => {
                 let idf = &s.name;
-                assert_eq!(idf.value, expectation[0]);
+                assert_eq!(idf.token.literal(), expectation[0]);
 
                 let value = &s.value;
                 test_expression(value, TestValue::String(expectation[1].to_string()));
@@ -151,7 +151,7 @@ fn test_expression(expression: &Expression, value: TestValue) {
     match value {
         TestValue::String(val) => match expression {
             Expression::IntegerLiteral(expr) => assert_eq!(expr.value.to_string(), val),
-            Expression::Identifier(expr) => assert_eq!(expr.value.to_string(), val),
+            Expression::Identifier(expr) => assert_eq!(expr.token.literal().to_string(), val),
             Expression::Boolean(expr) => assert_eq!(expr.value.to_string(), val),
             _ => panic!(),
         },
@@ -208,9 +208,9 @@ fn test_function_params() -> Result<(), MonkeyError> {
 
         match statement {
             Statement::Expression(Expression::Function(fun)) => {
-                assert_eq!(fun.token.token, Token::Function);
+                assert_eq!(fun.token, Token::Function);
                 for (param, expected) in fun.parameters.iter().zip(expected) {
-                    assert_eq!(param.value, expected);
+                    assert_eq!(param.token.literal(), expected);
                 }
             }
             _ => panic!(),
@@ -280,9 +280,9 @@ fn test_function() -> Result<(), MonkeyError> {
 
     match statement {
         Statement::Expression(Expression::Function(fun)) => {
-            assert_eq!(fun.token.token, Token::Function);
+            assert_eq!(fun.token, Token::Function);
             for (param, expected) in fun.parameters.iter().zip(exp_params) {
-                assert_eq!(param.value, expected);
+                assert_eq!(param.token.literal(), expected);
             }
 
             let statement = &fun.body.statements[0];
@@ -485,15 +485,15 @@ fn test_infix_opertor_more() -> Result<(), MonkeyError> {
 }
 
 fn test_let_statement(statement: &Statement, name: &str) {
-    assert_eq!(statement.token_literal().as_str(), "let");
+    assert_eq!(statement.token_literal(), "let");
     match statement {
-        Statement::Let(stmt) => assert_eq!(stmt.name.value, name),
+        Statement::Let(stmt) => assert_eq!(stmt.name.token.literal(), name),
         _ => panic!(),
     }
 }
 
 fn test_return_statement(statement: &Statement) {
-    assert_eq!(statement.token_literal().as_str(), "return");
+    assert_eq!(statement.token_literal(), "return");
     match statement {
         Statement::Return(_) => (),
         _ => panic!(),

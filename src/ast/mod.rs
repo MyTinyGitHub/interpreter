@@ -1,4 +1,4 @@
-use crate::token::TokenLiteral;
+use crate::token::Token;
 
 #[cfg(test)]
 pub mod tests;
@@ -26,7 +26,7 @@ pub enum Expression {
     Infix(InfixExpression),
     If(IfExpression),
     Function(FunctionLiteral),
-    Call(CallExpresion),
+    Call(CallExpression),
 }
 
 #[derive(Debug, Default)]
@@ -36,58 +36,57 @@ pub struct Program {
 
 #[derive(Debug, Clone)]
 pub struct Identifier {
-    pub token: TokenLiteral,
-    pub value: String,
+    pub token: Token,
 }
 
 #[derive(Debug, Clone)]
 pub struct IntegerLiteral {
-    pub token: TokenLiteral,
+    pub token: Token,
     pub value: i64,
 }
 
 #[derive(Debug, Clone)]
 pub struct BooleanLiteral {
-    pub token: TokenLiteral,
+    pub token: Token,
     pub value: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct FunctionLiteral {
-    pub token: TokenLiteral,
+    pub token: Token,
     pub parameters: Vec<Identifier>,
     pub body: BlockStatement,
 }
 
 #[derive(Debug, Clone)]
 pub struct LetStatement {
-    pub token: TokenLiteral,
+    pub token: Token,
     pub name: Identifier,
     pub value: Expression,
 }
 
 #[derive(Debug, Clone)]
 pub struct ReturnStatement {
-    pub token: TokenLiteral,
+    pub token: Token,
     pub value: Expression,
 }
 
 #[derive(Debug, Clone)]
 pub struct BlockStatement {
-    pub token: TokenLiteral,
+    pub token: Token,
     pub statements: Vec<Statement>,
 }
 
 #[derive(Debug, Clone)]
 pub struct PrefixExpression {
-    pub token: TokenLiteral,
+    pub token: Token,
     pub operator: String,
     pub right: Box<Expression>,
 }
 
 #[derive(Debug, Clone)]
 pub struct InfixExpression {
-    pub token: TokenLiteral,
+    pub token: Token,
     pub operator: String,
     pub right: Box<Expression>,
     pub left: Box<Expression>,
@@ -95,39 +94,34 @@ pub struct InfixExpression {
 
 #[derive(Debug, Clone)]
 pub struct IfExpression {
-    pub token: TokenLiteral,
+    pub token: Token,
     pub condition: Box<Expression>,
     pub consequence: BlockStatement,
     pub alternative: Option<BlockStatement>,
 }
 
 #[derive(Debug, Clone)]
-pub struct CallExpresion {
-    pub token: TokenLiteral,
+pub struct CallExpression {
+    pub token: Token,
     pub function: Box<Expression>,
     pub arguments: Vec<Expression>,
 }
 
 impl Program {
-    fn token_literal(&self) -> String {
-        if self.statements.is_empty() {
-            "".to_owned()
-        } else {
-            self.statements[0].token_literal()
-        }
+    fn token_literal(&self) -> &str {
+        self.statements[0].token_literal()
     }
 
     pub fn string(&self) -> String {
         self.statements
             .iter()
             .map(|s| s.string())
-            .collect::<Vec<_>>()
-            .join("")
+            .collect::<String>()
     }
 }
 
 impl Node {
-    fn token_literal(&self) -> String {
+    fn token_literal(&self) -> &str {
         match self {
             Self::Statement(node) => node.token_literal(),
             Self::Program(node) => node.token_literal(),
@@ -170,7 +164,7 @@ impl Expression {
         }
     }
 
-    fn token_literal(&self) -> String {
+    fn token_literal(&self) -> &str {
         match self {
             Self::Identifier(expr) => expr.token_literal(),
             Self::IntegerLiteral(expr) => expr.token_literal(),
@@ -185,7 +179,7 @@ impl Expression {
 }
 
 impl Statement {
-    pub fn token_literal(&self) -> String {
+    pub fn token_literal(&self) -> &str {
         match self {
             Self::Let(stmt) => stmt.token_literal(),
             Self::Return(stmt) => stmt.token_literal(),
@@ -207,19 +201,18 @@ impl Statement {
 }
 
 impl LetStatement {
-    pub fn new(token: &TokenLiteral, identifier: &TokenLiteral, value: Expression) -> Self {
+    pub fn new(token: &Token, identifier: &Token, value: Expression) -> Self {
         Self {
             token: token.clone(),
             name: Identifier {
                 token: identifier.clone(),
-                value: identifier.value.clone(),
             },
             value,
         }
     }
 
-    fn token_literal(&self) -> String {
-        self.token.value.clone().to_string()
+    fn token_literal(&self) -> &str {
+        &self.token.literal()
     }
 
     fn string(&self) -> String {
@@ -233,15 +226,8 @@ impl LetStatement {
 }
 
 impl ReturnStatement {
-    pub fn new(token: &TokenLiteral, expr: Expression) -> Self {
-        Self {
-            token: token.clone(),
-            value: expr,
-        }
-    }
-
-    fn token_literal(&self) -> String {
-        self.token.value.clone().to_string()
+    fn token_literal(&self) -> &str {
+        &self.token.literal()
     }
 
     fn string(&self) -> String {
@@ -250,15 +236,8 @@ impl ReturnStatement {
 }
 
 impl BlockStatement {
-    pub fn new(token: &TokenLiteral, statements: Vec<Statement>) -> Self {
-        Self {
-            token: token.to_owned(),
-            statements,
-        }
-    }
-
-    fn token_literal(&self) -> String {
-        self.token.value.clone().to_string()
+    fn token_literal(&self) -> &str {
+        &self.token.literal()
     }
 
     pub fn string(&self) -> String {
@@ -271,44 +250,44 @@ impl BlockStatement {
 }
 
 impl IntegerLiteral {
-    fn token_literal(&self) -> String {
-        self.token.value.clone()
+    fn token_literal(&self) -> &str {
+        &self.token.literal()
     }
 
     fn string(&self) -> String {
-        self.token.value.clone()
+        self.token_literal().to_owned()
     }
 
     fn expression_node(&self) {}
 }
 
 impl BooleanLiteral {
-    fn token_literal(&self) -> String {
-        self.token.value.clone()
+    fn token_literal(&self) -> &str {
+        &self.token.literal()
     }
 
     fn string(&self) -> String {
-        self.token.value.clone()
+        self.token_literal().to_owned()
     }
 
     fn expression_node(&self) {}
 }
 
 impl Identifier {
-    fn token_literal(&self) -> String {
-        self.token.value.clone().to_string()
+    fn token_literal(&self) -> &str {
+        &self.token.literal()
     }
 
     fn string(&self) -> String {
-        self.value.clone()
+        self.token_literal().to_owned()
     }
 
     fn expression_node(&self) {}
 }
 
 impl PrefixExpression {
-    fn token_literal(&self) -> String {
-        self.token.value.clone()
+    fn token_literal(&self) -> &str {
+        &self.token.literal()
     }
 
     fn string(&self) -> String {
@@ -319,8 +298,8 @@ impl PrefixExpression {
 }
 
 impl InfixExpression {
-    fn token_literal(&self) -> String {
-        self.token.value.clone()
+    fn token_literal(&self) -> &str {
+        &self.token.literal()
     }
 
     fn string(&self) -> String {
@@ -336,8 +315,8 @@ impl InfixExpression {
 }
 
 impl IfExpression {
-    fn token_literal(&self) -> String {
-        self.token.value.clone()
+    fn token_literal(&self) -> &str {
+        &self.token.literal()
     }
 
     fn string(&self) -> String {
@@ -355,8 +334,8 @@ impl IfExpression {
 }
 
 impl FunctionLiteral {
-    fn token_literal(&self) -> String {
-        self.token.value.clone()
+    fn token_literal(&self) -> &str {
+        &self.token.literal()
     }
 
     fn string(&self) -> String {
@@ -375,9 +354,9 @@ impl FunctionLiteral {
     fn expression_node(&self) {}
 }
 
-impl CallExpresion {
-    fn token_literal(&self) -> String {
-        self.token.value.clone()
+impl CallExpression {
+    fn token_literal(&self) -> &str {
+        &self.token.literal()
     }
 
     fn string(&self) -> String {

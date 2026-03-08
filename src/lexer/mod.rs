@@ -1,6 +1,7 @@
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
-use crate::token::{Token, TokenLiteral};
+use crate::token::Token;
 
 #[cfg(test)]
 pub mod tests;
@@ -11,6 +12,18 @@ pub struct Lexer {
     read_position: usize,
     ch: Option<u8>,
 }
+
+static TOKEN_MAP: LazyLock<HashMap<&'static str, Token>> = LazyLock::new(|| {
+    HashMap::from([
+        ("let", Token::Let),
+        ("fn", Token::Function),
+        ("if", Token::If),
+        ("else", Token::Else),
+        ("return", Token::Return),
+        ("true", Token::True),
+        ("false", Token::False),
+    ])
+});
 
 impl Lexer {
     pub fn new(input: &str) -> Self {
@@ -25,42 +38,11 @@ impl Lexer {
         result
     }
 
-    pub fn next_token(&mut self) -> TokenLiteral {
-        let token_map = HashMap::from([
-            (
-                "let".to_owned(),
-                TokenLiteral::new(Token::Let, "let".to_owned()),
-            ),
-            (
-                "fn".to_owned(),
-                TokenLiteral::new(Token::Function, "fn".to_owned()),
-            ),
-            (
-                "if".to_owned(),
-                TokenLiteral::new(Token::If, "if".to_owned()),
-            ),
-            (
-                "else".to_owned(),
-                TokenLiteral::new(Token::Else, "else".to_owned()),
-            ),
-            (
-                "return".to_owned(),
-                TokenLiteral::new(Token::Return, "return".to_owned()),
-            ),
-            (
-                "true".to_owned(),
-                TokenLiteral::new(Token::True, "true".to_owned()),
-            ),
-            (
-                "false".to_owned(),
-                TokenLiteral::new(Token::False, "false".to_owned()),
-            ),
-        ]);
-
+    pub fn next_token(&mut self) -> Token {
         self.skip_white_space();
 
         if self.ch.is_none() {
-            return TokenLiteral::new(Token::Eof, "".to_owned());
+            return Token::Eof;
         }
 
         let result = match self.ch.unwrap() as char {
@@ -68,48 +50,48 @@ impl Lexer {
                 self.peek_char();
                 if self.ch == Some(b'=') {
                     self.read_char();
-                    TokenLiteral::new(Token::Equal, "==".to_owned())
+                    Token::Equal
                 } else {
-                    TokenLiteral::new(Token::Assign, "=".to_owned())
+                    Token::Assign
                 }
             }
-            ';' => TokenLiteral::new(Token::Semicolon, ";".to_owned()),
-            ',' => TokenLiteral::new(Token::Comma, ",".to_owned()),
-            '(' => TokenLiteral::new(Token::Lparen, "(".to_owned()),
-            ')' => TokenLiteral::new(Token::Rparen, ")".to_owned()),
+            ';' => Token::Semicolon,
+            ',' => Token::Comma,
+            '(' => Token::Lparen,
+            ')' => Token::Rparen,
             '!' => {
                 self.peek_char();
 
                 if self.ch == Some(b'=') {
                     self.read_char();
-                    TokenLiteral::new(Token::Notequal, "!=".to_owned())
+                    Token::Notequal
                 } else {
-                    TokenLiteral::new(Token::Bang, "!".to_owned())
+                    Token::Bang
                 }
             }
-            '+' => TokenLiteral::new(Token::Plus, "+".to_owned()),
-            '-' => TokenLiteral::new(Token::Minus, "-".to_owned()),
-            '*' => TokenLiteral::new(Token::Asterisk, "*".to_owned()),
-            '/' => TokenLiteral::new(Token::Slash, "/".to_owned()),
-            '{' => TokenLiteral::new(Token::Lbrace, "{".to_owned()),
-            '}' => TokenLiteral::new(Token::Rbrace, "}".to_owned()),
-            '>' => TokenLiteral::new(Token::Gt, ">".to_owned()),
-            '<' => TokenLiteral::new(Token::Lt, "<".to_owned()),
+            '+' => Token::Plus,
+            '-' => Token::Minus,
+            '*' => Token::Asterisk,
+            '/' => Token::Slash,
+            '{' => Token::Lbrace,
+            '}' => Token::Rbrace,
+            '>' => Token::Gt,
+            '<' => Token::Lt,
             _ => {
                 if self.ch.unwrap().is_ascii_alphabetic() {
                     let identifier = self.read_identifier();
-                    if let Some(token) = token_map.get(&identifier).cloned() {
-                        return token;
+                    if let Some(token) = TOKEN_MAP.get(identifier.as_str()) {
+                        return token.to_owned();
                     }
 
-                    return TokenLiteral::new(Token::Ident, identifier);
+                    return Token::Ident(identifier);
                 }
 
                 if self.ch.is_some() {
-                    return TokenLiteral::new(Token::Int, self.read_number());
+                    return Token::Int(self.read_number());
                 }
 
-                TokenLiteral::new(Token::Illegal, "".to_owned())
+                Token::Illegal
             }
         };
 

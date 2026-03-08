@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env::args};
+use std::collections::HashMap;
 
 use crate::{
     ast::{BlockStatement, Expression, Identifier, IfExpression, Node, Program, Statement},
@@ -79,7 +79,7 @@ impl Function {
             "fn({}){{\n{}\n}}",
             self.parameters
                 .iter()
-                .map(|v| v.value.clone())
+                .map(|v| v.token.literal().as_ref())
                 .collect::<Vec<_>>()
                 .join(","),
             self.body.string()
@@ -128,7 +128,9 @@ pub fn eval(node: &Node, env: &mut Environment) -> Result<Option<Object>, Monkey
             }
             Statement::Let(let_stmt) => {
                 let value = eval(&Node::statement(let_stmt.value.clone()), env)?;
-                env.set(&let_stmt.name.value, value.clone().unwrap());
+                if let Some(val) = &value {
+                    env.set(let_stmt.name.token.literal(), val.clone());
+                }
                 value
             }
         },
@@ -158,7 +160,7 @@ pub fn extend_func_env(func: &Function, args: Vec<Object>) -> Environment {
     let mut extended = Environment::new_enclosed(&func.env);
 
     for (parameter, arg) in func.parameters.iter().zip(args) {
-        extended.set(&parameter.value, arg);
+        extended.set(&parameter.token.literal(), arg);
     }
 
     extended
@@ -172,7 +174,9 @@ pub fn eval_expressions(
 
     for expr in exprs {
         let evaluation = eval(&Node::statement(expr.clone()), env)?;
-        result.push(evaluation.unwrap());
+        if let Some(v) = evaluation {
+            result.push(v);
+        }
     }
 
     Ok(result)
@@ -182,12 +186,12 @@ pub fn eval_identifier(
     ident: &Identifier,
     env: &Environment,
 ) -> Result<Option<Object>, MonkeyError> {
-    let val = env.get(&ident.value);
+    let val = env.get(&ident.token.literal());
 
     match val {
         Some(val) => Ok(Some(val.clone())),
         None => {
-            let error_msg = format!("identifier not found: {}", ident.value);
+            let error_msg = format!("identifier not found: {}", ident.token.literal());
             Err(MonkeyError::Evaluator(error_msg))
         }
     }
@@ -318,8 +322,6 @@ pub fn eval_block_statements(
 
     for statement in block_statement.statements.iter() {
         result = eval(&Node::Statement(statement.clone()), env)?;
-
-        println!("{:?}", result);
 
         if let Some(Object::Return(_)) = result {
             return Ok(result);

@@ -1,29 +1,18 @@
 use crate::{
     ast::{Expression, Identifier, LetStatement, Program, Statement},
-    token::{Token, TokenLiteral},
+    token::Token,
 };
 
 #[test]
 fn test_string() {
     let input = Program {
         statements: vec![Statement::Let(LetStatement {
-            token: TokenLiteral {
-                token: Token::Let,
-                value: "let".to_owned(),
-            },
+            token: Token::Let,
             name: Identifier {
-                token: TokenLiteral {
-                    token: Token::Ident,
-                    value: "myVar".to_owned(),
-                },
-                value: "myVar".to_owned(),
+                token: Token::Ident("myVar".to_owned()),
             },
             value: Expression::Identifier(Identifier {
-                token: TokenLiteral {
-                    token: Token::Ident,
-                    value: "anotherVar".to_owned(),
-                },
-                value: "anotherVar".to_owned(),
+                token: Token::Ident("anotherVar".to_owned()),
             }),
         })],
     };

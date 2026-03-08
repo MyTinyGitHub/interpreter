@@ -1,9 +1,7 @@
-use std::{fmt::format, result};
-
 use crate::{
     ast::Node,
     error::MonkeyError,
-    evaluator::{Environment, Function, Object, eval},
+    evaluator::{Environment, Object, eval},
     lexer::Lexer,
     parser::Parser,
 };
@@ -133,6 +131,7 @@ fn test_closure() -> Result<(), MonkeyError> {
     assert!(test_integer_object(test_eval(input)?.unwrap(), 4));
     Ok(())
 }
+
 #[test]
 fn test_function() -> Result<(), MonkeyError> {
     let inputs = [
@@ -163,7 +162,7 @@ fn test_function_object() -> Result<(), MonkeyError> {
     match eval {
         Some(Object::Function(func)) => {
             assert_eq!(func.parameters.len(), 1);
-            assert_eq!(func.parameters[0].value, "x");
+            assert_eq!(func.parameters[0].token.literal(), "x");
             assert_eq!(func.body.string(), "(x + 2)");
             Ok(())
         }
