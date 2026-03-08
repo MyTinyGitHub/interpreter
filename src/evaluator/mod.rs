@@ -79,7 +79,7 @@ impl Function {
             "fn({}){{\n{}\n}}",
             self.parameters
                 .iter()
-                .map(|v| v.token.literal().as_ref())
+                .map(|v| v.token.literal())
                 .collect::<Vec<_>>()
                 .join(","),
             self.body.string()
@@ -160,7 +160,7 @@ pub fn extend_func_env(func: &Function, args: Vec<Object>) -> Environment {
     let mut extended = Environment::new_enclosed(&func.env);
 
     for (parameter, arg) in func.parameters.iter().zip(args) {
-        extended.set(&parameter.token.literal(), arg);
+        extended.set(parameter.token.literal(), arg);
     }
 
     extended
@@ -186,7 +186,7 @@ pub fn eval_identifier(
     ident: &Identifier,
     env: &Environment,
 ) -> Result<Option<Object>, MonkeyError> {
-    let val = env.get(&ident.token.literal());
+    let val = env.get(ident.token.literal());
 
     match val {
         Some(val) => Ok(Some(val.clone())),

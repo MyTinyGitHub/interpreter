@@ -108,10 +108,6 @@ pub struct CallExpression {
 }
 
 impl Program {
-    fn token_literal(&self) -> &str {
-        self.statements[0].token_literal()
-    }
-
     pub fn string(&self) -> String {
         self.statements
             .iter()
@@ -121,13 +117,6 @@ impl Program {
 }
 
 impl Node {
-    fn token_literal(&self) -> &str {
-        match self {
-            Self::Statement(node) => node.token_literal(),
-            Self::Program(node) => node.token_literal(),
-        }
-    }
-
     pub fn block(expr: BlockStatement) -> Self {
         Node::Statement(Statement::Block(expr))
     }
@@ -138,19 +127,6 @@ impl Node {
 }
 
 impl Expression {
-    fn expression_node(&self) {
-        match self {
-            Self::Identifier(expr) => expr.expression_node(),
-            Self::IntegerLiteral(expr) => expr.expression_node(),
-            Self::Prefix(expr) => expr.expression_node(),
-            Self::Infix(expr) => expr.expression_node(),
-            Self::Boolean(expr) => expr.expression_node(),
-            Self::If(expr) => expr.expression_node(),
-            Self::Function(expr) => expr.expression_node(),
-            Self::Call(expr) => expr.expression_node(),
-        }
-    }
-
     pub fn string(&self) -> String {
         match self {
             Self::Identifier(expr) => expr.string(),
@@ -196,8 +172,6 @@ impl Statement {
             Self::Expression(stmt) => stmt.string(),
         }
     }
-
-    fn statement_node(&self) {}
 }
 
 impl LetStatement {
@@ -212,7 +186,7 @@ impl LetStatement {
     }
 
     fn token_literal(&self) -> &str {
-        &self.token.literal()
+        self.token.literal()
     }
 
     fn string(&self) -> String {
@@ -227,7 +201,7 @@ impl LetStatement {
 
 impl ReturnStatement {
     fn token_literal(&self) -> &str {
-        &self.token.literal()
+        self.token.literal()
     }
 
     fn string(&self) -> String {
@@ -237,7 +211,7 @@ impl ReturnStatement {
 
 impl BlockStatement {
     fn token_literal(&self) -> &str {
-        &self.token.literal()
+        self.token.literal()
     }
 
     pub fn string(&self) -> String {
@@ -251,55 +225,47 @@ impl BlockStatement {
 
 impl IntegerLiteral {
     fn token_literal(&self) -> &str {
-        &self.token.literal()
+        self.token.literal()
     }
 
     fn string(&self) -> String {
         self.token_literal().to_owned()
     }
-
-    fn expression_node(&self) {}
 }
 
 impl BooleanLiteral {
     fn token_literal(&self) -> &str {
-        &self.token.literal()
+        self.token.literal()
     }
 
     fn string(&self) -> String {
         self.token_literal().to_owned()
     }
-
-    fn expression_node(&self) {}
 }
 
 impl Identifier {
     fn token_literal(&self) -> &str {
-        &self.token.literal()
+        self.token.literal()
     }
 
     fn string(&self) -> String {
         self.token_literal().to_owned()
     }
-
-    fn expression_node(&self) {}
 }
 
 impl PrefixExpression {
     fn token_literal(&self) -> &str {
-        &self.token.literal()
+        self.token.literal()
     }
 
     fn string(&self) -> String {
         format!("({}{})", self.operator, self.right.as_ref().string(),)
     }
-
-    fn expression_node(&self) {}
 }
 
 impl InfixExpression {
     fn token_literal(&self) -> &str {
-        &self.token.literal()
+        self.token.literal()
     }
 
     fn string(&self) -> String {
@@ -310,13 +276,11 @@ impl InfixExpression {
             self.right.as_ref().string(),
         )
     }
-
-    fn expression_node(&self) {}
 }
 
 impl IfExpression {
     fn token_literal(&self) -> &str {
-        &self.token.literal()
+        self.token.literal()
     }
 
     fn string(&self) -> String {
@@ -329,13 +293,11 @@ impl IfExpression {
                 .map_or(String::new(), |v| format!("else {}", v.string()))
         )
     }
-
-    fn expression_node(&self) {}
 }
 
 impl FunctionLiteral {
     fn token_literal(&self) -> &str {
-        &self.token.literal()
+        self.token.literal()
     }
 
     fn string(&self) -> String {
@@ -350,13 +312,11 @@ impl FunctionLiteral {
             self.body.string(),
         )
     }
-
-    fn expression_node(&self) {}
 }
 
 impl CallExpression {
     fn token_literal(&self) -> &str {
-        &self.token.literal()
+        self.token.literal()
     }
 
     fn string(&self) -> String {
@@ -370,6 +330,4 @@ impl CallExpression {
                 .join(", ")
         )
     }
-
-    fn expression_node(&self) {}
 }
