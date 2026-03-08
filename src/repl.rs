@@ -2,7 +2,7 @@ use std::io;
 
 use crate::{
     ast::Node,
-    evaluator::{Environment, eval},
+    evaluator::{environment::Environment, eval},
     lexer::Lexer,
     parser::Parser,
 };

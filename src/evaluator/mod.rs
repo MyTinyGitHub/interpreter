@@ -1,91 +1,17 @@
-use std::collections::HashMap;
-
 use crate::{
     ast::{BlockStatement, Expression, Identifier, IfExpression, Node, Program, Statement},
     error::MonkeyError,
+    evaluator::{
+        environment::Environment,
+        object::{Function, Object},
+    },
 };
 
-type ObjectType = String;
+pub mod environment;
+pub mod object;
 
 #[cfg(test)]
 pub mod tests;
-
-#[derive(Debug, Clone)]
-pub struct Function {
-    parameters: Vec<Identifier>,
-    body: BlockStatement,
-    env: Environment,
-}
-
-#[derive(Debug, Clone)]
-pub enum Object {
-    Integer(i64),
-    Boolean(bool),
-    Return(Box<Object>),
-    Function(Function),
-    Null,
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct Environment {
-    store: HashMap<String, Object>,
-    outer: Option<Box<Environment>>,
-}
-
-impl Environment {
-    pub fn new_enclosed(env: &Environment) -> Self {
-        Self {
-            store: HashMap::default(),
-            outer: Some(Box::new(env.clone())),
-        }
-    }
-
-    pub fn get(&self, value: &str) -> Option<&Object> {
-        self.store
-            .get(value)
-            .or_else(|| self.outer.as_ref()?.get(value))
-    }
-
-    pub fn set(&mut self, value: &str, object: Object) {
-        self.store.insert(value.to_string(), object);
-    }
-}
-
-impl Object {
-    pub fn obj_type(&self) -> ObjectType {
-        match self {
-            Self::Integer(_) => "INTEGER".to_string(),
-            Self::Boolean(_) => "BOOLEAN".to_string(),
-            Self::Return(_) => "RETURN_VALUE".to_string(),
-            Self::Function(_) => "FUNCTION".to_string(),
-            Self::Null => "NULL".to_string(),
-        }
-    }
-
-    pub fn inspect(&self) -> String {
-        match self {
-            Self::Integer(val) => val.to_string(),
-            Self::Boolean(val) => val.to_string(),
-            Self::Return(val) => val.inspect(),
-            Self::Function(val) => val.inspect(),
-            Self::Null => "null".to_string(),
-        }
-    }
-}
-
-impl Function {
-    pub fn inspect(&self) -> String {
-        format!(
-            "fn({}){{\n{}\n}}",
-            self.parameters
-                .iter()
-                .map(|v| v.token.literal())
-                .collect::<Vec<_>>()
-                .join(","),
-            self.body.string()
-        )
-    }
-}
 
 pub fn eval(node: &Node, env: &mut Environment) -> Result<Option<Object>, MonkeyError> {
     let result: Option<Object> = match node {
@@ -150,20 +76,10 @@ pub fn apply_function(object: Object, args: Vec<Object>) -> Result<Option<Object
         }
     };
 
-    let mut extended_env = extend_func_env(&func, args);
+    let mut extended_env = func.env.extend_func_env(&func, args);
     let evaluated = eval(&Node::block(func.body.clone()), &mut extended_env)?;
 
     Ok(evaluated)
-}
-
-pub fn extend_func_env(func: &Function, args: Vec<Object>) -> Environment {
-    let mut extended = Environment::new_enclosed(&func.env);
-
-    for (parameter, arg) in func.parameters.iter().zip(args) {
-        extended.set(parameter.token.literal(), arg);
-    }
-
-    extended
 }
 
 pub fn eval_expressions(
